@@ -6,6 +6,7 @@ import (
 	customMiddleware "content/internal/lib/logger/middleware"
 	"content/internal/lib/logger/sl"
 	"content/internal/storage/postgresql"
+	"database/sql"
 	"log"
 	"log/slog"
 	"net/http"
@@ -36,18 +37,9 @@ func main() {
 
 	defer storage.Close()
 
-	router := chi.NewRouter()
-
-	router.Use(middleware.RequestID)
-	router.Use(customMiddleware.New(logger))
-	router.Use(middleware.Recoverer)
-	router.Use(middleware.URLFormat)
-
-	content.NewContentHandler(logger).RegisterRoutes(router)
-
 	server := &http.Server{
 		Addr:         cfg.HttpServer.Address,
-		Handler:      router,
+		Handler:      buildHandler(logger, storage),
 		ReadTimeout:  cfg.HttpServer.Timeout,
 		WriteTimeout: cfg.HttpServer.Timeout,
 		IdleTimeout:  cfg.HttpServer.IddleTimeout,
@@ -75,4 +67,20 @@ func setupLogger(env string) *slog.Logger {
 	}
 
 	return logger
+}
+
+func buildHandler(logger *slog.Logger, storage *sql.DB) http.Handler {
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(customMiddleware.New(logger))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+
+	content.NewContentHandler(
+		content.NewService(content.NewRepository(storage), logger),
+		logger,
+	).RegisterRoutes(router)
+
+	return router
 }

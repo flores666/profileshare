@@ -7,11 +7,9 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
-type Storage struct {
-	db *sql.DB
-}
-
-func NewStorage(driverName, connectionString string) (*Storage, error) {
+// NewStorage creates a connection pool to a PostgreSQL database.
+// Make sure to close the connection by calling db.Close() when done.
+func NewStorage(driverName, connectionString string) (*sql.DB, error) {
 	const op = "storage.postgresql.NewStorage"
 
 	db, err := sql.Open(driverName, connectionString)
@@ -24,11 +22,5 @@ func NewStorage(driverName, connectionString string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
 	}
 
-	return &Storage{
-		db: db,
-	}, nil
-}
-
-func (s *Storage) Close() error {
-	return s.db.Close()
+	return db, nil
 }

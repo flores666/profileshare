@@ -2,7 +2,6 @@ package content
 
 import (
 	"content/internal/lib/api"
-	"fmt"
 	"log/slog"
 	"net/http"
 
@@ -11,43 +10,51 @@ import (
 )
 
 const basePath = "/api/content"
-const caller = "handlers.content.api"
 
 type Handler struct {
 	service Service
 	logger  *slog.Logger
 }
 
-func NewContentHandler(logger *slog.Logger) *Handler {
+func NewContentHandler(service Service, logger *slog.Logger) *Handler {
 	handler := &Handler{
-		logger: logger,
+		logger:  logger,
+		service: service,
 	}
 
 	handler.logger = logger.With(
-		slog.String("caller", caller),
+		slog.String("caller", "handlers.content.api"),
 	)
 
 	return handler
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	r.Post(basePath, h.createContent)
-	r.Get(basePath+"/{id}", h.getContent)
+	r.Post(basePath, h.create)
+	r.Get(basePath+"/{id}", h.getById)
 }
 
-func (h *Handler) createContent(w http.ResponseWriter, r *http.Request) {
-	var request CreateRequest
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	var request CreateContentRequest
 
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, api.NewError(err.Error()))
 		h.logger.Warn(err.Error())
 
 		return
 	}
 
-	fmt.Println(request)
+	response := h.service.CreateContent(request)
+
+	if !response.IsOk() {
+		h.logger.Warn(response.Error)
+		render.Status(r, http.StatusInternalServerError)
+	}
+
+	render.JSON(w, r, response)
 }
 
-func (h *Handler) getContent(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 
 }
