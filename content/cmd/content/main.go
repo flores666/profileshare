@@ -2,12 +2,17 @@ package main
 
 import (
 	"content/internal/config"
+	"content/internal/handlers/content"
+	customMiddleware "content/internal/lib/logger/middleware"
 	"content/internal/lib/logger/sl"
 	"content/internal/storage/postgresql"
 	"log"
 	"log/slog"
+	"net/http"
 	"os"
 
+	"github.com/go-chi/chi/v5"
+	"github.com/go-chi/chi/v5/middleware"
 	"github.com/joho/godotenv"
 )
 
@@ -25,13 +30,36 @@ func main() {
 
 	storage, err := postgresql.NewStorage("pgx", cfg.ConnectionString)
 	if err != nil {
-		logger.Error("failed to init storage", sl.Err(err))
+		logger.Error("failed to init storage", sl.Error(err))
 		os.Exit(1)
 	}
-	_ = storage
 
-	//todo init router: chi, chi render
-	//todo run server:
+	defer storage.Close()
+
+	router := chi.NewRouter()
+
+	router.Use(middleware.RequestID)
+	router.Use(customMiddleware.New(logger))
+	router.Use(middleware.Recoverer)
+	router.Use(middleware.URLFormat)
+
+	content.NewContentHandler(logger).RegisterRoutes(router)
+
+	server := &http.Server{
+		Addr:         cfg.HttpServer.Address,
+		Handler:      router,
+		ReadTimeout:  cfg.HttpServer.Timeout,
+		WriteTimeout: cfg.HttpServer.Timeout,
+		IdleTimeout:  cfg.HttpServer.IddleTimeout,
+	}
+
+	logger.Info("starting application", slog.String("address", cfg.HttpServer.Address))
+
+	if err := server.ListenAndServe(); err != nil {
+		logger.Error("failed to start http server", sl.Error(err))
+	}
+
+	logger.Info("http server stopped")
 }
 
 func setupLogger(env string) *slog.Logger {

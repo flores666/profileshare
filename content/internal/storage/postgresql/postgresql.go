@@ -19,8 +19,6 @@ func NewStorage(driverName, connectionString string) (*Storage, error) {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
 
-	defer db.Close()
-
 	var version string
 	if err := db.QueryRow("SELECT version()").Scan(&version); err != nil {
 		return nil, fmt.Errorf("%s: query failed: %w", op, err)
@@ -29,4 +27,8 @@ func NewStorage(driverName, connectionString string) (*Storage, error) {
 	return &Storage{
 		db: db,
 	}, nil
+}
+
+func (s *Storage) Close() error {
+	return s.db.Close()
 }
