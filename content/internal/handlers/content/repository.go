@@ -21,9 +21,9 @@ func (r repository) Create(content entity.Content) (err error) {
 	useTransaction := content.FolderId != ""
 
 	return r.exec(useTransaction, func(exec func(query string, args ...any) (sql.Result, error)) error {
-		insertContentQuery := `INSERT INTO content.content (id, user_id, display_name, text, media_url, type, created_at, deleted_at) VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`
+		insertContentQuery := `INSERT INTO content.content (id, user_id, display_name, text, media_url, type, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`
 
-		_, err = exec(insertContentQuery, content.Id, content.UserId, content.DisplayName, content.Text, content.MediaUrl, content.Type, content.CreatedAt, content.DeletedAt)
+		_, err = exec(insertContentQuery, content.Id, content.UserId, content.DisplayName, content.Text, content.MediaUrl, content.Type, content.CreatedAt)
 		if err == nil && content.FolderId != "" {
 			insertLinkQuery := `INSERT INTO content.folders_contents (folder_id, content_id, created_at) VALUES ($1,$2,$3)`
 
