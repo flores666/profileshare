@@ -9,17 +9,9 @@ import (
 )
 
 type Config struct {
-	Env          string       `yaml:"env" env-required:"true"`
-	DbConnection dbConnection `yaml:"db_connection" env-required:"true"`
-	HttpServer   HttpServer   `yaml:"http_server" env-required:"true"`
-}
-
-type dbConnection struct {
-	User     string `yaml:"user" env-required:"true"`
-	Password string `yaml:"password" env-required:"true"`
-	Host     string `yaml:"host" env-required:"true"`
-	Port     int    `yaml:"port" env-required:"true"`
-	Dbname   string `yaml:"dbname" env-required:"true"`
+	Env              string     `yaml:"env" env-required:"true"`
+	ConnectionString string     `yaml:"db_connection_string" env-required:"true"`
+	HttpServer       HttpServer `yaml:"http_server" env-required:"true"`
 }
 
 type HttpServer struct {
