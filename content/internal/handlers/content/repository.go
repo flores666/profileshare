@@ -3,10 +3,12 @@ package content
 import (
 	"content/internal/handlers/content/entity"
 	"database/sql"
+	"errors"
 )
 
 type Repository interface {
 	Create(content entity.Content) error
+	GetContentById(id string) (*entity.Content, error)
 }
 
 type repository struct {
@@ -35,6 +37,32 @@ func (r repository) Create(content entity.Content) (err error) {
 
 		return err
 	})
+}
+
+func (r repository) GetContentById(id string) (*entity.Content, error) {
+	query := `SELECT * FROM content.content WHERE id = $1`
+
+	var content entity.Content
+	err := r.db.QueryRow(query, id).Scan(
+		&content.Id,
+		&content.UserId,
+		&content.DisplayName,
+		&content.Text,
+		&content.MediaUrl,
+		&content.Type,
+		&content.DeletedAt,
+		&content.CreatedAt,
+	)
+
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, errors.New("not found")
+		}
+
+		return nil, err
+	}
+
+	return &content, nil
 }
 
 func (r repository) exec(useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {

@@ -4,12 +4,14 @@ import (
 	"content/internal/handlers/content/entity"
 	"content/internal/lib/api"
 	"content/internal/lib/utils"
+	"database/sql"
 	"log/slog"
 	"time"
 )
 
 type Service interface {
 	CreateContent(request CreateContentRequest) CreateContentResponse
+	GetContentById(id string) (*Content, error)
 }
 
 type service struct {
@@ -38,7 +40,6 @@ func (s service) CreateContent(request CreateContentRequest) CreateContentRespon
 
 	model := Content{
 		Content: entity.Content{
-
 			Id:          id,
 			UserId:      request.UserId,
 			DisplayName: request.DisplayName,
@@ -47,7 +48,10 @@ func (s service) CreateContent(request CreateContentRequest) CreateContentRespon
 			Type:        request.Type,
 			FolderId:    request.FolderId,
 			CreatedAt:   now,
-			DeletedAt:   now,
+			DeletedAt: sql.NullTime{
+				Time:  now,
+				Valid: true,
+			},
 		},
 	}
 
@@ -64,4 +68,15 @@ func (s service) CreateContent(request CreateContentRequest) CreateContentRespon
 		Content:      model,
 		HttpResponse: api.NewOk(),
 	}
+}
+
+func (s service) GetContentById(id string) (*Content, error) {
+	item, err := s.repository.GetContentById(id)
+	if err != nil {
+		return nil, err
+	}
+
+	return &Content{
+		Content: *item,
+	}, nil
 }

@@ -1,6 +1,9 @@
 package entity
 
-import "time"
+import (
+	"database/sql"
+	"time"
+)
 
 // Content represents content entity in database
 type Content struct {
@@ -12,5 +15,5 @@ type Content struct {
 	Type        string
 	FolderId    string
 	CreatedAt   time.Time
-	DeletedAt   time.Time
+	DeletedAt   sql.NullTime
 }

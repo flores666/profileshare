@@ -56,5 +56,25 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 }
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
 
+	if id == "" {
+		const message = "missing id"
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, api.NewError(message))
+		h.logger.Warn(message)
+
+		return
+	}
+
+	item, err := h.service.GetContentById(id)
+	if err != nil {
+		render.Status(r, http.StatusNotFound)
+		render.JSON(w, r, api.NewError(err.Error()))
+		h.logger.Info(err.Error())
+
+		return
+	}
+
+	render.JSON(w, r, item)
 }
