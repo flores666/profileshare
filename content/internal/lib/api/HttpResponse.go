@@ -23,6 +23,6 @@ func NewOk() HttpResponse {
 	}
 }
 
-func (r HttpResponse) IsOk() bool {
+func (r HttpResponse) Ok() bool {
 	return r.Status == StatusOk
 }

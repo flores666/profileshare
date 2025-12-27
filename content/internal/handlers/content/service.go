@@ -10,17 +10,14 @@ import (
 )
 
 type Service interface {
-	CreateContent(request CreateContentRequest) CreateContentResponse
-	GetContentById(id string) (*Content, error)
+	CreateContent(request CreateContentRequest) Response
+	GetById(id string) Response
+	GetByFilter(filter Filter) QueryResponse
 }
 
 type service struct {
 	repository Repository
 	logger     *slog.Logger
-}
-
-type Content struct {
-	entity.Content
 }
 
 func NewService(repository Repository, logger *slog.Logger) Service {
@@ -34,49 +31,66 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s service) CreateContent(request CreateContentRequest) CreateContentResponse {
+func (s service) CreateContent(request CreateContentRequest) Response {
 	id := utils.NewGuid()
 	now := time.Now()
 
-	model := Content{
-		Content: entity.Content{
-			Id:          id,
-			UserId:      request.UserId,
-			DisplayName: request.DisplayName,
-			Text:        request.Text,
-			MediaUrl:    request.MediaUrl,
-			Type:        request.Type,
-			FolderId:    request.FolderId,
-			CreatedAt:   now,
-			DeletedAt: sql.NullTime{
-				Time:  now,
-				Valid: true,
-			},
+	model := entity.Content{
+		Id:          id,
+		UserId:      request.UserId,
+		DisplayName: request.DisplayName,
+		Text:        request.Text,
+		MediaUrl:    request.MediaUrl,
+		Type:        request.Type,
+		FolderId:    request.FolderId,
+		CreatedAt:   now,
+		DeletedAt: sql.NullTime{
+			Time:  now,
+			Valid: true,
 		},
 	}
 
-	err := s.repository.Create(model.Content)
+	err := s.repository.Create(model)
 
 	if err != nil {
 		s.logger.Error("could not create content, error = ", err.Error())
-		return CreateContentResponse{
+		return Response{
 			HttpResponse: api.NewError("could not create content"),
 		}
 	}
 
-	return CreateContentResponse{
-		Content:      model,
+	return Response{
+		Data:         &model,
 		HttpResponse: api.NewOk(),
 	}
 }
 
-func (s service) GetContentById(id string) (*Content, error) {
-	item, err := s.repository.GetContentById(id)
+func (s service) GetById(id string) Response {
+	item, err := s.repository.GetById(id)
 	if err != nil {
-		return nil, err
+		return Response{
+			HttpResponse: api.NewError(err.Error()),
+		}
 	}
 
-	return &Content{
-		Content: *item,
-	}, nil
+	return Response{
+		HttpResponse: api.NewOk(),
+		Data:         item,
+	}
+}
+
+func (s service) GetByFilter(filter Filter) QueryResponse {
+	list, err := s.repository.Query(filter)
+
+	if err != nil {
+		return QueryResponse{
+			HttpResponse: api.NewError(err.Error()),
+			Data:         []*entity.Content{},
+		}
+	}
+
+	return QueryResponse{
+		HttpResponse: api.NewOk(),
+		Data:         list,
+	}
 }

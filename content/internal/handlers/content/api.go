@@ -32,6 +32,7 @@ func NewContentHandler(service Service, logger *slog.Logger) *Handler {
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post(basePath, h.create)
 	r.Get(basePath+"/{id}", h.getById)
+	r.Get(basePath, h.getByFilter)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -47,7 +48,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 
 	response := h.service.CreateContent(request)
 
-	if !response.IsOk() {
+	if !response.Ok() {
 		h.logger.Warn(response.Error)
 		render.Status(r, http.StatusInternalServerError)
 	}
@@ -67,14 +68,41 @@ func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	item, err := h.service.GetContentById(id)
-	if err != nil {
+	response := h.service.GetById(id)
+	if !response.Ok() {
 		render.Status(r, http.StatusNotFound)
-		render.JSON(w, r, api.NewError(err.Error()))
-		h.logger.Info(err.Error())
+		render.JSON(w, r, api.NewError(response.Error))
+		h.logger.Info(response.Error)
 
 		return
 	}
 
-	render.JSON(w, r, item)
+	render.JSON(w, r, response)
+}
+
+func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
+	filter := getFilter(r)
+	if filter.FolderId == "" || filter.UserId == "" {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, api.NewError("Missing parameters: folderId, userId"))
+		return
+	}
+
+	response := h.service.GetByFilter(filter)
+	if !response.Ok() {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, api.NewError(response.Error))
+		h.logger.Warn(response.Error)
+		return
+	}
+
+	render.JSON(w, r, response)
+}
+
+func getFilter(r *http.Request) Filter {
+	return Filter{
+		UserId:   r.URL.Query().Get("userId"),
+		Search:   r.URL.Query().Get("search"),
+		FolderId: r.URL.Query().Get("folderId"),
+	}
 }

@@ -1,6 +1,7 @@
 package content
 
 import (
+	"content/internal/handlers/content/entity"
 	"content/internal/lib/api"
 )
 
@@ -13,7 +14,18 @@ type CreateContentRequest struct {
 	FolderId    string `json:"folderId" validate:"required"`
 }
 
-type CreateContentResponse struct {
+type Response struct {
 	api.HttpResponse
-	Content
+	Data *entity.Content `json:"data"`
+}
+
+type Filter struct {
+	UserId   string
+	Search   string
+	FolderId string
+}
+
+type QueryResponse struct {
+	api.HttpResponse
+	Data []*entity.Content `json:"data"`
 }
