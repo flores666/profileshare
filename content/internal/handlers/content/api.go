@@ -39,7 +39,6 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
 	if id == "" {
 		const message = "missing id"
 		render.Status(r, http.StatusBadRequest)
@@ -82,7 +81,6 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var request CreateContentRequest
-
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, api.NewError(err.Error()))
@@ -104,7 +102,6 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var request UpdateContentRequest
-
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
 		render.Status(r, http.StatusBadRequest)
 		render.JSON(w, r, api.NewError(err.Error()))
@@ -126,7 +123,6 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
-
 	if id == "" {
 		const message = "missing id"
 		render.Status(r, http.StatusBadRequest)
