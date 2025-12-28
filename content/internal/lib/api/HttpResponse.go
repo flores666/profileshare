@@ -1,8 +1,10 @@
 package api
 
 type HttpResponse struct {
-	Status string `json:"status"` //error, ok
-	Error  string `json:"error,omitempty"`
+	Status      string            `json:"status"` //error, ok
+	Data        any               `json:"data,omitempty"`
+	Validations []ValidationError `json:"validations,omitempty"`
+	Message     string            `json:"message,omitempty"`
 }
 
 const (
@@ -10,19 +12,39 @@ const (
 	StatusError = "Error"
 )
 
-func NewError(msg string) HttpResponse {
-	return HttpResponse{
+// NewError creates [StatusError] api response.
+// validations can be nil
+func NewError(msg string, validations *ValidationErrors) HttpResponse {
+	response := HttpResponse{
 		Status: StatusError,
-		Error:  msg,
 	}
+
+	if validations != nil {
+		response.Validations = validations.Validations
+	}
+
+	if msg == "" {
+		response.Message = msg
+	}
+
+	return response
 }
 
-func NewOk() HttpResponse {
-	return HttpResponse{
+// NewOk creates [StatusOk] api response.
+// Payload can be nil
+func NewOk(payload any) HttpResponse {
+	response := HttpResponse{
 		Status: StatusOk,
 	}
+
+	if payload != nil {
+		response.Data = payload
+	}
+
+	return response
 }
 
+// Ok checks if response status is [StatusOk]
 func (r HttpResponse) Ok() bool {
 	return r.Status == StatusOk
 }

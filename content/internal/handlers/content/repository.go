@@ -1,7 +1,6 @@
 package content
 
 import (
-	"content/internal/handlers/content/entity"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -10,10 +9,10 @@ import (
 )
 
 type Repository interface {
-	Create(content entity.Content) error
-	GetById(id string) (*entity.Content, error)
-	Query(filter Filter) ([]*entity.Content, error)
-	Update(model entity.UpdateContent) error
+	Create(content Content) error
+	GetById(id string) (*Content, error)
+	Query(filter Filter) ([]*Content, error)
+	Update(model UpdateContent) error
 	SafeDelete(id string) error
 }
 
@@ -25,7 +24,7 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db}
 }
 
-func (r repository) Create(content entity.Content) (err error) {
+func (r repository) Create(content Content) (err error) {
 	useTransaction := content.FolderId != ""
 
 	return r.exec(useTransaction, func(exec func(query string, args ...any) (sql.Result, error)) error {
@@ -45,7 +44,7 @@ func (r repository) Create(content entity.Content) (err error) {
 	})
 }
 
-func (r repository) GetById(id string) (*entity.Content, error) {
+func (r repository) GetById(id string) (*Content, error) {
 	query := `SELECT         
     	id,
         user_id,
@@ -57,7 +56,7 @@ func (r repository) GetById(id string) (*entity.Content, error) {
         created_at
     FROM content.content WHERE id = $1`
 
-	var content entity.Content
+	var content Content
 	err := r.db.QueryRow(query, id).Scan(
 		&content.Id,
 		&content.UserId,
@@ -80,7 +79,7 @@ func (r repository) GetById(id string) (*entity.Content, error) {
 	return &content, nil
 }
 
-func (r repository) Query(filter Filter) ([]*entity.Content, error) {
+func (r repository) Query(filter Filter) ([]*Content, error) {
 	query := `
 		SELECT
 			c.id, c.user_id, c.display_name, c.text,
@@ -118,10 +117,10 @@ func (r repository) Query(filter Filter) ([]*entity.Content, error) {
 
 	defer rows.Close()
 
-	list := make([]*entity.Content, 0)
+	list := make([]*Content, 0)
 
 	for rows.Next() {
-		var content entity.Content
+		var content Content
 		if err = rows.Scan(
 			&content.Id,
 			&content.UserId,
@@ -140,7 +139,7 @@ func (r repository) Query(filter Filter) ([]*entity.Content, error) {
 	return list, nil
 }
 
-func (r repository) Update(model entity.UpdateContent) error {
+func (r repository) Update(model UpdateContent) error {
 	if model.Id == "" {
 		return errors.New("id is required")
 	}

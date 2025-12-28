@@ -1,52 +1,87 @@
 package content
 
 import (
-	"errors"
+	"content/internal/lib/api"
 	"slices"
 )
 
 var contentTypes = []string{"photo", "video"}
 
-func validateCreate(request CreateContentRequest) error {
+func validateCreate(request CreateContentRequest) *api.ValidationErrors {
+	errs := &api.ValidationErrors{}
+
 	if request.UserId == "" {
-		return errors.New("userId is required")
+		errs.Add("userId", "is required")
 	}
 
-	if request.DisplayName == "" {
-		return errors.New("displayName is required")
+	if request.DisplayName == "" || len([]rune(request.DisplayName)) <= 2 {
+		errs.Add("displayName", "must be at least 2 characters")
 	}
 
 	if request.FolderId == "" {
-		return errors.New("folderId is required")
+		errs.Add("folderId", "is required")
 	}
 
-	if request.Type == "" || !slices.Contains(contentTypes, request.Type) {
-		return errors.New("type is required")
+	if request.Type == "" {
+		errs.Add("type", "is required")
 	}
 
-	return nil
+	if !slices.Contains(contentTypes, request.Type) {
+		errs.Add("type", "invalid input")
+	}
+
+	if errs.Ok() {
+		return nil
+	}
+
+	return errs
 }
 
-func validateFilter(filter Filter) error {
+func validateFilter(filter Filter) *api.ValidationErrors {
+	errs := &api.ValidationErrors{}
+
 	if filter.FolderId == "" {
-		return errors.New("folder id is required")
+		errs.Add("folderId", "is required")
 	}
 
 	if filter.UserId == "" {
-		return errors.New("user id is required")
+		errs.Add("userId", "is required")
 	}
 
-	return nil
+	if errs.Ok() {
+		return nil
+	}
+
+	return errs
 }
 
-func validateUpdate(request UpdateContentRequest) error {
-	if request.DisplayName != nil && *request.DisplayName == "" {
-		return errors.New("displayName is required")
+func validateUpdate(request UpdateContentRequest) *api.ValidationErrors {
+	errs := &api.ValidationErrors{}
+
+	if request.DisplayName != nil && len([]rune(*request.DisplayName)) <= 2 {
+		errs.Add("displayName", "must be at least 2 characters")
 	}
 
 	if request.Id == "" {
-		return errors.New("id is required")
+		errs.Add("id", "is required")
 	}
 
-	return nil
+	if errs.Ok() {
+		return nil
+	}
+
+	return errs
+}
+
+func validateId(id string) *api.ValidationErrors {
+	errs := &api.ValidationErrors{}
+	if id == "" {
+		errs.Add("id", "is required")
+	}
+
+	if errs.Ok() {
+		return nil
+	}
+
+	return errs
 }

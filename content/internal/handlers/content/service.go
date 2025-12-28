@@ -1,7 +1,6 @@
 package content
 
 import (
-	"content/internal/handlers/content/entity"
 	"content/internal/lib/api"
 	"content/internal/lib/utils"
 	"database/sql"
@@ -10,17 +9,22 @@ import (
 )
 
 type Service interface {
-	Create(request CreateContentRequest) Response
-	Update(request UpdateContentRequest) Response
-	GetById(id string) Response
-	GetByFilter(filter Filter) QueryResponse
-	SafeDelete(id string) Response
+	Create(request CreateContentRequest) (*Content, *api.ValidationErrors)
+	Update(request UpdateContentRequest) *api.ValidationErrors
+	GetById(id string) (*Content, *api.ValidationErrors)
+	GetByFilter(filter Filter) ([]*Content, *api.ValidationErrors)
+	SafeDelete(id string) *api.ValidationErrors
 }
 
 type service struct {
 	repository Repository
 	logger     *slog.Logger
 }
+
+const (
+	ErrFailedSave  = "failed to save data"
+	ErrFailedQuery = "failed to query data"
+)
 
 func NewService(repository Repository, logger *slog.Logger) Service {
 	srv := service{
@@ -33,17 +37,15 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s service) Create(request CreateContentRequest) Response {
+func (s service) Create(request CreateContentRequest) (*Content, *api.ValidationErrors) {
 	if err := validateCreate(request); err != nil {
-		return Response{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return nil, err
 	}
 
 	id := utils.NewGuid()
 	now := time.Now()
 
-	model := entity.Content{
+	model := Content{
 		Id:          id,
 		UserId:      request.UserId,
 		DisplayName: request.DisplayName,
@@ -58,71 +60,47 @@ func (s service) Create(request CreateContentRequest) Response {
 		},
 	}
 
-	err := s.repository.Create(model)
-
-	if err != nil {
-		s.logger.Error("could not create content, error = ", err.Error())
-		return Response{
-			HttpResponse: api.NewError("could not create content"),
-		}
+	if repoErr := s.repository.Create(model); repoErr != nil {
+		s.logger.Error("could not create content, error = ", repoErr.Error())
+		return nil, api.NewValidationErrors(ErrFailedSave)
 	}
 
-	return Response{
-		Data:         &model,
-		HttpResponse: api.NewOk(),
-	}
+	return &model, nil
 }
 
-func (s service) GetById(id string) Response {
-	if id == "" {
-		return Response{
-			HttpResponse: api.NewError("id is required"),
-		}
+func (s service) GetById(id string) (*Content, *api.ValidationErrors) {
+	if err := validateId(id); err != nil {
+		return nil, err
 	}
 
 	item, err := s.repository.GetById(id)
 	if err != nil {
-		return Response{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return nil, api.NewValidationErrors(ErrFailedQuery)
 	}
 
-	return Response{
-		HttpResponse: api.NewOk(),
-		Data:         item,
-	}
+	return item, nil
 }
 
-func (s service) GetByFilter(filter Filter) QueryResponse {
+func (s service) GetByFilter(filter Filter) ([]*Content, *api.ValidationErrors) {
 	if err := validateFilter(filter); err != nil {
-		return QueryResponse{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return nil, err
 	}
 
 	list, err := s.repository.Query(filter)
 
 	if err != nil {
-		return QueryResponse{
-			HttpResponse: api.NewError(err.Error()),
-			Data:         []*entity.Content{},
-		}
+		return nil, api.NewValidationErrors(ErrFailedQuery)
 	}
 
-	return QueryResponse{
-		HttpResponse: api.NewOk(),
-		Data:         list,
-	}
+	return list, nil
 }
 
-func (s service) Update(request UpdateContentRequest) Response {
+func (s service) Update(request UpdateContentRequest) *api.ValidationErrors {
 	if err := validateUpdate(request); err != nil {
-		return Response{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return err
 	}
 
-	model := entity.UpdateContent{
+	model := UpdateContent{
 		Id:          request.Id,
 		DisplayName: request.DisplayName,
 		Text:        request.Text,
@@ -131,25 +109,17 @@ func (s service) Update(request UpdateContentRequest) Response {
 
 	err := s.repository.Update(model)
 	if err != nil {
-		return Response{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return api.NewValidationErrors(ErrFailedSave)
 	}
 
-	return Response{
-		HttpResponse: api.NewOk(),
-	}
+	return nil
 }
 
-func (s service) SafeDelete(id string) Response {
+func (s service) SafeDelete(id string) *api.ValidationErrors {
 	err := s.repository.SafeDelete(id)
 	if err != nil {
-		return Response{
-			HttpResponse: api.NewError(err.Error()),
-		}
+		return api.NewValidationErrors(ErrFailedSave)
 	}
 
-	return Response{
-		HttpResponse: api.NewOk(),
-	}
+	return nil
 }

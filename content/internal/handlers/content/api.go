@@ -40,110 +40,97 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		const message = "missing id"
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError(message))
-		h.logger.Warn(message)
+		err := &api.ValidationErrors{}
+		err.Add("id", "is required")
+		respondError(w, r, http.StatusBadRequest, err)
 
 		return
 	}
 
-	response := h.service.GetById(id)
-	if !response.Ok() {
-		render.Status(r, http.StatusNotFound)
-		render.JSON(w, r, api.NewError(response.Error))
-		h.logger.Info(response.Error)
-
+	response, err := h.service.GetById(id)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
-	render.JSON(w, r, response)
+	respond(w, r, http.StatusOK, response)
 }
 
 func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 	filter := getFilter(r)
-	if filter.FolderId == "" || filter.UserId == "" {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError("Missing parameters: folderId, userId"))
+	err := &api.ValidationErrors{}
+
+	if filter.FolderId == "" {
+		err.Add("folderId", "is required")
+	}
+	if filter.UserId == "" {
+		err.Add("userId", "is required")
+	}
+	if !err.Ok() {
+		respondError(w, r, http.StatusBadRequest, err)
 		return
 	}
 
-	response := h.service.GetByFilter(filter)
-	if !response.Ok() {
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, api.NewError(response.Error))
-		h.logger.Warn(response.Error)
+	response, err := h.service.GetByFilter(filter)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
-	render.JSON(w, r, response)
+	respond(w, r, http.StatusOK, response)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var request CreateContentRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError(err.Error()))
-		h.logger.Warn(err.Error())
-
+		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
 		return
 	}
 
 	// todo: авторизация и подстановка userId текущего авторизованного пользователя
-	response := h.service.Create(request)
-
-	if !response.Ok() {
-		h.logger.Warn(response.Error)
-		render.Status(r, http.StatusInternalServerError)
+	response, err := h.service.Create(request)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
 	}
 
-	render.JSON(w, r, response)
+	respond(w, r, http.StatusOK, response)
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var request UpdateContentRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError(err.Error()))
-		h.logger.Warn(err.Error())
-
+		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
 		return
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	response := h.service.Update(request)
-
-	if !response.Ok() {
-		h.logger.Warn(response.Error)
-		render.Status(r, http.StatusInternalServerError)
+	err := h.service.Update(request)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
+		return
 	}
 
-	render.JSON(w, r, response)
+	respond(w, r, http.StatusOK, nil)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		const message = "missing id"
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError(message))
-		h.logger.Warn(message)
+		err := &api.ValidationErrors{}
+		err.Add("id", "is required")
+		respondError(w, r, http.StatusBadRequest, err)
 
 		return
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	response := h.service.SafeDelete(id)
-
-	if !response.Ok() {
-		render.Status(r, http.StatusInternalServerError)
-		render.JSON(w, r, api.NewError(response.Error))
-		h.logger.Info(response.Error)
-
+	err := h.service.SafeDelete(id)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
 		return
 	}
 
-	render.JSON(w, r, response)
+	respond(w, r, http.StatusOK, err)
 }
 
 func getFilter(r *http.Request) Filter {
@@ -152,4 +139,16 @@ func getFilter(r *http.Request) Filter {
 		Search:   r.URL.Query().Get("search"),
 		FolderId: r.URL.Query().Get("folderId"),
 	}
+}
+
+func respond(w http.ResponseWriter, r *http.Request, status int, payload any) {
+	render.Status(r, status)
+	if payload != nil {
+		render.JSON(w, r, api.NewOk(payload))
+	}
+}
+
+func respondError(w http.ResponseWriter, r *http.Request, status int, err *api.ValidationErrors) {
+	render.Status(r, status)
+	render.JSON(w, r, api.NewError(err.Message, err))
 }
