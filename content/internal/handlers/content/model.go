@@ -14,6 +14,13 @@ type CreateContentRequest struct {
 	FolderId    string `json:"folderId" validate:"required"`
 }
 
+type UpdateContentRequest struct {
+	Id          string  `json:"id" validate:"required"`
+	DisplayName *string `json:"displayName,omitempty"`
+	Text        *string `json:"text,omitempty"`
+	MediaUrl    *string `json:"mediaUrl,omitempty"`
+}
+
 type Response struct {
 	api.HttpResponse
 	Data *entity.Content `json:"data"`

@@ -30,30 +30,11 @@ func NewContentHandler(service Service, logger *slog.Logger) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
-	r.Post(basePath, h.create)
 	r.Get(basePath+"/{id}", h.getById)
 	r.Get(basePath, h.getByFilter)
-}
-
-func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
-	var request CreateContentRequest
-
-	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		render.Status(r, http.StatusBadRequest)
-		render.JSON(w, r, api.NewError(err.Error()))
-		h.logger.Warn(err.Error())
-
-		return
-	}
-
-	response := h.service.CreateContent(request)
-
-	if !response.Ok() {
-		h.logger.Warn(response.Error)
-		render.Status(r, http.StatusInternalServerError)
-	}
-
-	render.JSON(w, r, response)
+	r.Post(basePath, h.create)
+	r.Put(basePath, h.update)
+	r.Delete(basePath+"/{id}", h.delete)
 }
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +74,76 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 		render.Status(r, http.StatusInternalServerError)
 		render.JSON(w, r, api.NewError(response.Error))
 		h.logger.Warn(response.Error)
+		return
+	}
+
+	render.JSON(w, r, response)
+}
+
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	var request CreateContentRequest
+
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, api.NewError(err.Error()))
+		h.logger.Warn(err.Error())
+
+		return
+	}
+
+	// todo: авторизация и подстановка userId текущего авторизованного пользователя
+	response := h.service.Create(request)
+
+	if !response.Ok() {
+		h.logger.Warn(response.Error)
+		render.Status(r, http.StatusInternalServerError)
+	}
+
+	render.JSON(w, r, response)
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	var request UpdateContentRequest
+
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, api.NewError(err.Error()))
+		h.logger.Warn(err.Error())
+
+		return
+	}
+
+	// todo: авторизация и проверка на владение сущностью
+	response := h.service.Update(request)
+
+	if !response.Ok() {
+		h.logger.Warn(response.Error)
+		render.Status(r, http.StatusInternalServerError)
+	}
+
+	render.JSON(w, r, response)
+}
+
+func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+
+	if id == "" {
+		const message = "missing id"
+		render.Status(r, http.StatusBadRequest)
+		render.JSON(w, r, api.NewError(message))
+		h.logger.Warn(message)
+
+		return
+	}
+
+	// todo: авторизация и проверка на владение сущностью
+	response := h.service.SafeDelete(id)
+
+	if !response.Ok() {
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, api.NewError(response.Error))
+		h.logger.Info(response.Error)
+
 		return
 	}
 

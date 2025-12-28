@@ -17,3 +17,10 @@ type Content struct {
 	CreatedAt   time.Time
 	DeletedAt   sql.NullTime
 }
+
+type UpdateContent struct {
+	Id          string
+	DisplayName *string
+	Text        *string
+	MediaUrl    *string
+}

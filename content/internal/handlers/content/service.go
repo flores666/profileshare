@@ -10,9 +10,11 @@ import (
 )
 
 type Service interface {
-	CreateContent(request CreateContentRequest) Response
+	Create(request CreateContentRequest) Response
+	Update(request UpdateContentRequest) Response
 	GetById(id string) Response
 	GetByFilter(filter Filter) QueryResponse
+	SafeDelete(id string) Response
 }
 
 type service struct {
@@ -31,7 +33,13 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s service) CreateContent(request CreateContentRequest) Response {
+func (s service) Create(request CreateContentRequest) Response {
+	if err := validateCreate(request); err != nil {
+		return Response{
+			HttpResponse: api.NewError(err.Error()),
+		}
+	}
+
 	id := utils.NewGuid()
 	now := time.Now()
 
@@ -66,6 +74,12 @@ func (s service) CreateContent(request CreateContentRequest) Response {
 }
 
 func (s service) GetById(id string) Response {
+	if id == "" {
+		return Response{
+			HttpResponse: api.NewError("id is required"),
+		}
+	}
+
 	item, err := s.repository.GetById(id)
 	if err != nil {
 		return Response{
@@ -80,6 +94,12 @@ func (s service) GetById(id string) Response {
 }
 
 func (s service) GetByFilter(filter Filter) QueryResponse {
+	if err := validateFilter(filter); err != nil {
+		return QueryResponse{
+			HttpResponse: api.NewError(err.Error()),
+		}
+	}
+
 	list, err := s.repository.Query(filter)
 
 	if err != nil {
@@ -92,5 +112,44 @@ func (s service) GetByFilter(filter Filter) QueryResponse {
 	return QueryResponse{
 		HttpResponse: api.NewOk(),
 		Data:         list,
+	}
+}
+
+func (s service) Update(request UpdateContentRequest) Response {
+	if err := validateUpdate(request); err != nil {
+		return Response{
+			HttpResponse: api.NewError(err.Error()),
+		}
+	}
+
+	model := entity.UpdateContent{
+		Id:          request.Id,
+		DisplayName: request.DisplayName,
+		Text:        request.Text,
+		MediaUrl:    request.MediaUrl,
+	}
+
+	err := s.repository.Update(model)
+	if err != nil {
+		return Response{
+			HttpResponse: api.NewError(err.Error()),
+		}
+	}
+
+	return Response{
+		HttpResponse: api.NewOk(),
+	}
+}
+
+func (s service) SafeDelete(id string) Response {
+	err := s.repository.SafeDelete(id)
+	if err != nil {
+		return Response{
+			HttpResponse: api.NewError(err.Error()),
+		}
+	}
+
+	return Response{
+		HttpResponse: api.NewOk(),
 	}
 }

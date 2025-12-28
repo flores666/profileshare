@@ -5,12 +5,16 @@ import (
 	"database/sql"
 	"errors"
 	"fmt"
+	"strings"
+	"time"
 )
 
 type Repository interface {
 	Create(content entity.Content) error
 	GetById(id string) (*entity.Content, error)
 	Query(filter Filter) ([]*entity.Content, error)
+	Update(model entity.UpdateContent) error
+	SafeDelete(id string) error
 }
 
 type repository struct {
@@ -134,6 +138,53 @@ func (r repository) Query(filter Filter) ([]*entity.Content, error) {
 	}
 
 	return list, nil
+}
+
+func (r repository) Update(model entity.UpdateContent) error {
+	if model.Id == "" {
+		return errors.New("id is required")
+	}
+
+	query := "UPDATE content.content SET "
+	var args []any
+	argsId := 1
+
+	if model.DisplayName != nil {
+		query += fmt.Sprintf("display_name = $%d, ", argsId)
+		args = append(args, *model.DisplayName)
+		argsId++
+	}
+	if model.Text != nil {
+		query += fmt.Sprintf("text = $%d, ", argsId)
+		args = append(args, *model.Text)
+		argsId++
+	}
+	if model.MediaUrl != nil {
+		query += fmt.Sprintf("media_url = $%d, ", argsId)
+		args = append(args, *model.MediaUrl)
+		argsId++
+	}
+
+	query = strings.TrimSuffix(query, ", ")
+
+	query += fmt.Sprintf(" WHERE id = $%d", argsId)
+	args = append(args, model.Id)
+
+	_, err := r.db.Exec(query, args...)
+	return err
+}
+
+func (r repository) SafeDelete(id string) error {
+	if id == "" {
+		return errors.New("id is required")
+	}
+
+	now := time.Now()
+
+	query := "UPDATE content.content SET deleted_at = $1 WHERE id = $2"
+	_, err := r.db.Exec(query, now, id)
+
+	return err
 }
 
 func (r repository) exec(useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {
