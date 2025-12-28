@@ -47,7 +47,7 @@ func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.GetById(id)
+	response, err := h.service.GetById(r.Context(), id)
 	if err != nil {
 		respondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -71,7 +71,7 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response, err := h.service.GetByFilter(filter)
+	response, err := h.service.GetByFilter(r.Context(), filter)
 	if err != nil {
 		respondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -88,7 +88,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// todo: авторизация и подстановка userId текущего авторизованного пользователя
-	response, err := h.service.Create(request)
+	response, err := h.service.Create(r.Context(), request)
 	if err != nil {
 		respondError(w, r, http.StatusInternalServerError, err)
 	}
@@ -104,7 +104,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	err := h.service.Update(request)
+	err := h.service.Update(r.Context(), request)
 	if err != nil {
 		respondError(w, r, http.StatusInternalServerError, err)
 		return
@@ -124,7 +124,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	err := h.service.SafeDelete(id)
+	err := h.service.SafeDelete(r.Context(), id)
 	if err != nil {
 		respondError(w, r, http.StatusInternalServerError, err)
 		return

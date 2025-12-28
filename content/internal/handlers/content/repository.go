@@ -1,6 +1,7 @@
 package content
 
 import (
+	"context"
 	"database/sql"
 	"errors"
 	"fmt"
@@ -9,11 +10,11 @@ import (
 )
 
 type Repository interface {
-	Create(content Content) error
-	GetById(id string) (*Content, error)
-	Query(filter Filter) ([]*Content, error)
-	Update(model UpdateContent) error
-	SafeDelete(id string) error
+	Create(ctx context.Context, content Content) error
+	GetById(ctx context.Context, id string) (*Content, error)
+	Query(ctx context.Context, filter Filter) ([]*Content, error)
+	Update(ctx context.Context, model UpdateContent) error
+	SafeDelete(ctx context.Context, id string) error
 }
 
 type repository struct {
@@ -24,10 +25,10 @@ func NewRepository(db *sql.DB) Repository {
 	return &repository{db}
 }
 
-func (r repository) Create(content Content) (err error) {
+func (r repository) Create(ctx context.Context, content Content) (err error) {
 	useTransaction := content.FolderId != ""
 
-	return r.exec(useTransaction, func(exec func(query string, args ...any) (sql.Result, error)) error {
+	return r.exec(ctx, useTransaction, func(exec func(query string, args ...any) (sql.Result, error)) error {
 		insertContentQuery := `INSERT INTO content.content (id, user_id, display_name, text, media_url, type, created_at) VALUES ($1,$2,$3,$4,$5,$6,$7)`
 
 		_, err = exec(insertContentQuery, content.Id, content.UserId, content.DisplayName, content.Text, content.MediaUrl, content.Type, content.CreatedAt)
@@ -44,7 +45,7 @@ func (r repository) Create(content Content) (err error) {
 	})
 }
 
-func (r repository) GetById(id string) (*Content, error) {
+func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
 	query := `SELECT         
     	id,
         user_id,
@@ -57,7 +58,7 @@ func (r repository) GetById(id string) (*Content, error) {
     FROM content.content WHERE id = $1`
 
 	var content Content
-	err := r.db.QueryRow(query, id).Scan(
+	err := r.db.QueryRowContext(ctx, query, id).Scan(
 		&content.Id,
 		&content.UserId,
 		&content.DisplayName,
@@ -79,7 +80,7 @@ func (r repository) GetById(id string) (*Content, error) {
 	return &content, nil
 }
 
-func (r repository) Query(filter Filter) ([]*Content, error) {
+func (r repository) Query(ctx context.Context, filter Filter) ([]*Content, error) {
 	query := `
 		SELECT
 			c.id, c.user_id, c.display_name, c.text,
@@ -110,7 +111,7 @@ func (r repository) Query(filter Filter) ([]*Content, error) {
 	//todo: cursor pagination
 	query += " ORDER BY c.created_at DESC LIMIT 20"
 
-	rows, err := r.db.Query(query, args...)
+	rows, err := r.db.QueryContext(ctx, query, args...)
 	if err != nil {
 		return nil, err
 	}
@@ -139,7 +140,7 @@ func (r repository) Query(filter Filter) ([]*Content, error) {
 	return list, nil
 }
 
-func (r repository) Update(model UpdateContent) error {
+func (r repository) Update(ctx context.Context, model UpdateContent) error {
 	if model.Id == "" {
 		return errors.New("id is required")
 	}
@@ -169,11 +170,11 @@ func (r repository) Update(model UpdateContent) error {
 	query += fmt.Sprintf(" WHERE id = $%d", argsId)
 	args = append(args, model.Id)
 
-	_, err := r.db.Exec(query, args...)
+	_, err := r.db.ExecContext(ctx, query, args...)
 	return err
 }
 
-func (r repository) SafeDelete(id string) error {
+func (r repository) SafeDelete(ctx context.Context, id string) error {
 	if id == "" {
 		return errors.New("id is required")
 	}
@@ -181,14 +182,14 @@ func (r repository) SafeDelete(id string) error {
 	now := time.Now()
 
 	query := "UPDATE content.content SET deleted_at = $1 WHERE id = $2"
-	_, err := r.db.Exec(query, now, id)
+	_, err := r.db.ExecContext(ctx, query, now, id)
 
 	return err
 }
 
-func (r repository) exec(useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {
+func (r repository) exec(ctx context.Context, useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {
 	if useTransaction {
-		tran, tranErr := r.db.Begin()
+		tran, tranErr := r.db.BeginTx(ctx, &sql.TxOptions{})
 		if tranErr != nil {
 			return tranErr
 		}
