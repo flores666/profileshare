@@ -71,7 +71,7 @@ func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return nil, errors.New("not found")
+			return nil, nil
 		}
 
 		return nil, err
