@@ -1,7 +1,6 @@
 package content
 
 import (
-	"database/sql"
 	"time"
 )
 
@@ -15,7 +14,7 @@ type Content struct {
 	Type        string
 	FolderId    string
 	CreatedAt   time.Time
-	DeletedAt   sql.NullTime
+	DeletedAt   time.Time
 }
 
 type UpdateContent struct {

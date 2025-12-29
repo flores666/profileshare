@@ -53,7 +53,7 @@ func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
         text,
         media_url,
         type,
-        deleted_at,
+        COALESCE(deleted_at, '0001-01-01 00:00:00+00'),
         created_at
     FROM content.content WHERE id = $1`
 

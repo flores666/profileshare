@@ -4,7 +4,6 @@ import (
 	"content/internal/lib/api"
 	"content/internal/lib/utils"
 	"context"
-	"database/sql"
 	"log/slog"
 	"time"
 )
@@ -55,10 +54,6 @@ func (s service) Create(ctx context.Context, request CreateContentRequest) (*Con
 		Type:        request.Type,
 		FolderId:    request.FolderId,
 		CreatedAt:   now,
-		DeletedAt: sql.NullTime{
-			Time:  now,
-			Valid: true,
-		},
 	}
 
 	if repoErr := s.repository.Create(ctx, model); repoErr != nil {
