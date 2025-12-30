@@ -91,8 +91,8 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 	respond(w, r, http.StatusOK, response)
 }
 
-func getFilter(r *http.Request) Filter {
-	return Filter{
+func getFilter(r *http.Request) QueryFilter {
+	return QueryFilter{
 		Search: r.URL.Query().Get("search"),
 	}
 }

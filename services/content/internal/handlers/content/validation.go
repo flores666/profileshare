@@ -49,6 +49,10 @@ func validateFilter(filter Filter) *api.ValidationErrors {
 		errs.Add("userId", "is required")
 	}
 
+	if len([]rune(filter.Search)) < 2 {
+		errs.Add("search", "must contain at least 2 characters")
+	}
+
 	if errs.Ok() {
 		return nil
 	}

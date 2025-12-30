@@ -1,4 +1,4 @@
-package users
+package repository
 
 import "time"
 
@@ -13,8 +13,8 @@ type User struct {
 
 type UpdateUser struct {
 	Id           string    `db:"id"`
-	Nickname     string    `db:"nickname"`
-	Email        string    `db:"email"`
-	RoleId       string    `db:"role_id"`
+	Nickname     *string   `db:"nickname"`
+	Email        *string   `db:"email"`
+	RoleId       *string   `db:"role_id"`
 	BannedBefore time.Time `db:"banned_before"`
 }

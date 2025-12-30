@@ -7,14 +7,14 @@ type CreateUserRequest struct {
 	Email    string `json:"email"`
 }
 
-type Filter struct {
+type QueryFilter struct {
 	Search string `json:"search"`
 }
 
 type UpdateUserRequest struct {
-	Id           string    `db:"id"`
-	Nickname     string    `db:"nickname"`
-	Email        string    `db:"email"`
-	RoleId       string    `db:"role_id"`
-	BannedBefore time.Time `db:"banned_before"`
+	Id           string     `json:"id"`
+	Nickname     *string    `json:"nickname"`
+	Email        *string    `json:"email"`
+	RoleId       *string    `json:"roleId"`
+	BannedBefore *time.Time `json:"bannedBefore"`
 }
