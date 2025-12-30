@@ -3,7 +3,7 @@ package content
 import (
 	"slices"
 
-	"github.com/flores666/profileshare/tree/master/lib/api"
+	"api"
 )
 
 var contentTypes = []string{"photo", "video"}

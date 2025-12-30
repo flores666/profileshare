@@ -5,8 +5,8 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/flores666/profileshare/tree/master/lib/api"
-	"github.com/flores666/profileshare/tree/master/lib/utils"
+	"api"
+	"utils"
 )
 
 type Service interface {

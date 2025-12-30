@@ -3,7 +3,8 @@ package content
 import (
 	"net/http"
 
-	"github.com/flores666/profileshare/tree/master/lib/api"
+	"api"
+
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )

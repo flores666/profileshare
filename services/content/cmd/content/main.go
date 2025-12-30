@@ -1,6 +1,7 @@
 package main
 
 import (
+	"config"
 	"content/internal/handlers/content"
 	"content/internal/storage/postgresql"
 	"log"
@@ -8,9 +9,8 @@ import (
 	"net/http"
 	"os"
 
-	plog "github.com/flores666/profileshare/tree/master/lib/logger"
+	plog "logger"
 
-	"github.com/flores666/profileshare/tree/master/lib/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
