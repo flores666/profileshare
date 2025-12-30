@@ -22,12 +22,73 @@ func NewUsersHandler(service Service) *Handler {
 	}
 }
 
-func (h Handler) RegisterRoutes(r chi.Router) {
-	r.Get(BaseRoutePath, h.test)
+func (h *Handler) RegisterRoutes(r chi.Router) {
+	r.Post(BaseRoutePath, h.create)
+	r.Put(BaseRoutePath, h.update)
+	r.Get(BaseRoutePath+"/{id}", h.getById)
+	r.Get(BaseRoutePath, h.getByFilter)
 }
 
-func (h Handler) test(w http.ResponseWriter, r *http.Request) {
-	respond(w, r, http.StatusOK, "Hello World")
+func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
+	var request CreateUserRequest
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		return
+	}
+
+	result, err := h.service.Create(r.Context(), request)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	respond(w, r, http.StatusOK, result)
+}
+
+func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
+	var request UpdateUserRequest
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		return
+	}
+
+	err := h.service.Update(r.Context(), request)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	respond(w, r, http.StatusOK, nil)
+}
+
+func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
+	id := chi.URLParam(r, "id")
+	if id == "" {
+		err := &api.ValidationErrors{}
+		err.Add("id", "is required")
+		respondError(w, r, http.StatusBadRequest, err)
+
+		return
+	}
+
+	response, err := h.service.GetById(r.Context(), id)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	respond(w, r, http.StatusOK, response)
+}
+
+func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
+	filter := getFilter(r)
+	response, err := h.service.GetByFilter(r.Context(), filter)
+	if err != nil {
+		respondError(w, r, http.StatusInternalServerError, err)
+		return
+	}
+
+	respond(w, r, http.StatusOK, response)
 }
 
 func getFilter(r *http.Request) Filter {

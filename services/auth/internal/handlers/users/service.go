@@ -9,8 +9,8 @@ import (
 type Service interface {
 	Create(ctx context.Context, user CreateUserRequest) (*User, *api.ValidationErrors)
 	GetById(ctx context.Context, id string) (*User, *api.ValidationErrors)
-	Query(ctx context.Context, filter Filter) ([]*User, *api.ValidationErrors)
-	Update(ctx context.Context, model UpdateUser) *api.ValidationErrors
+	GetByFilter(ctx context.Context, filter Filter) ([]*User, *api.ValidationErrors)
+	Update(ctx context.Context, model UpdateUserRequest) *api.ValidationErrors
 }
 
 type service struct {
@@ -35,12 +35,12 @@ func (s service) GetById(ctx context.Context, id string) (*User, *api.Validation
 	panic("implement me")
 }
 
-func (s service) Query(ctx context.Context, filter Filter) ([]*User, *api.ValidationErrors) {
+func (s service) GetByFilter(ctx context.Context, filter Filter) ([]*User, *api.ValidationErrors) {
 	//TODO implement me
 	panic("implement me")
 }
 
-func (s service) Update(ctx context.Context, model UpdateUser) *api.ValidationErrors {
+func (s service) Update(ctx context.Context, model UpdateUserRequest) *api.ValidationErrors {
 	//TODO implement me
 	panic("implement me")
 }
