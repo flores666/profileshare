@@ -1,9 +1,9 @@
 package content
 
 import (
-	"content/internal/lib/api"
 	"net/http"
 
+	"github.com/flores666/profileshare/tree/master/lib/api"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 )

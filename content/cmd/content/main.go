@@ -1,16 +1,16 @@
 package main
 
 import (
-	"content/internal/config"
 	"content/internal/handlers/content"
-	customMiddleware "content/internal/lib/logger/middleware"
-	"content/internal/lib/logger/sl"
 	"content/internal/storage/postgresql"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
 
+	plog "github.com/flores666/profileshare/tree/master/lib/logger"
+
+	"github.com/flores666/profileshare/tree/master/lib/config"
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
 	"github.com/jmoiron/sqlx"
@@ -31,13 +31,13 @@ func main() {
 
 	storage, err := postgresql.NewStorage("pgx", cfg.ConnectionString)
 	if err != nil {
-		logger.Error("failed to init storage", sl.Error(err))
+		logger.Error("failed to init storage", plog.Error(err))
 		os.Exit(1)
 	}
 
 	defer func(storage *sqlx.DB) {
 		err := storage.Close()
-		logger.Warn("failed to close storage", sl.Error(err))
+		logger.Warn("failed to close storage", plog.Error(err))
 	}(storage)
 
 	server := &http.Server{
@@ -51,7 +51,7 @@ func main() {
 	logger.Info("starting application", slog.String("address", cfg.HttpServer.Address))
 
 	if err := server.ListenAndServe(); err != nil {
-		logger.Error("failed to start http server", sl.Error(err))
+		logger.Error("failed to start http server", plog.Error(err))
 	}
 
 	logger.Info("http server stopped")
@@ -76,7 +76,7 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
-	router.Use(customMiddleware.New(logger))
+	router.Use(plog.NewRequestLogMiddleware(logger))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 

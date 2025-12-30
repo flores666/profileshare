@@ -1,11 +1,12 @@
 package content
 
 import (
-	"content/internal/lib/api"
-	"content/internal/lib/utils"
 	"context"
 	"log/slog"
 	"time"
+
+	"github.com/flores666/profileshare/tree/master/lib/api"
+	"github.com/flores666/profileshare/tree/master/lib/utils"
 )
 
 type Service interface {

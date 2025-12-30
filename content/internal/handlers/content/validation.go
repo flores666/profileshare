@@ -1,8 +1,9 @@
 package content
 
 import (
-	"content/internal/lib/api"
 	"slices"
+
+	"github.com/flores666/profileshare/tree/master/lib/api"
 )
 
 var contentTypes = []string{"photo", "video"}
