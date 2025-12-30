@@ -4,9 +4,10 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"strings"
 	"time"
+
+	"github.com/jmoiron/sqlx"
 )
 
 type Repository interface {
@@ -18,10 +19,10 @@ type Repository interface {
 }
 
 type repository struct {
-	db *sql.DB
+	db *sqlx.DB
 }
 
-func NewRepository(db *sql.DB) Repository {
+func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db}
 }
 
@@ -53,21 +54,12 @@ func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
         text,
         media_url,
         type,
-        COALESCE(deleted_at, '0001-01-01 00:00:00+00'),
+        COALESCE(deleted_at, '0001-01-01 00:00:00+00') as deleted_at,
         created_at
     FROM content.content WHERE id = $1`
 
 	var content Content
-	err := r.db.QueryRowContext(ctx, query, id).Scan(
-		&content.Id,
-		&content.UserId,
-		&content.DisplayName,
-		&content.Text,
-		&content.MediaUrl,
-		&content.Type,
-		&content.DeletedAt,
-		&content.CreatedAt,
-	)
+	err := r.db.GetContext(ctx, &content, query, id)
 
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -84,60 +76,47 @@ func (r repository) Query(ctx context.Context, filter Filter) ([]*Content, error
 	query := `
 		SELECT
 			c.id, c.user_id, c.display_name, c.text,
-			c.media_url, c.type, c.deleted_at, c.created_at
+			c.media_url, c.type, COALESCE(c.deleted_at, make_timestamptz(1,1,1,0,0,0)) as deleted_at, c.created_at
 		FROM content.content c`
 
-	args := []any{filter.UserId}
-	argID := 2
-
-	if filter.FolderId != "" {
-		query += fmt.Sprintf(" JOIN content.folders_contents f on f.content_id = c.id")
+	params := map[string]any{
+		"user_id": filter.UserId,
 	}
 
-	query += " WHERE c.user_id = $1"
+	if filter.FolderId != "" {
+		query += " JOIN content.folders_contents f on f.content_id = c.id"
+	}
+
+	query += " WHERE c.user_id = :user_id"
 
 	if filter.FolderId != "" {
-		query += fmt.Sprintf(" AND f.folder_id = $%d", argID)
-		args = append(args, filter.FolderId)
-		argID++
+		query += " AND f.folder_id = :folder_id"
+		params["folder_id"] = filter.FolderId
 	}
 
 	if filter.Search != "" {
-		query += fmt.Sprintf(" AND (c.text ILIKE $%d OR c.display_name ILIKE $%d)", argID, argID)
-		args = append(args, "%"+filter.Search+"%")
-		argID++
+		query += " AND (c.text ILIKE :search OR c.display_name ILIKE :search)"
+		params["search"] = "%" + filter.Search + "%"
 	}
 
 	//todo: cursor pagination
 	query += " ORDER BY c.created_at DESC LIMIT 20"
 
-	rows, err := r.db.QueryContext(ctx, query, args...)
+	query, args, err := sqlx.Named(query, params)
 	if err != nil {
 		return nil, err
 	}
 
-	defer rows.Close()
+	query = sqlx.Rebind(sqlx.DOLLAR, query)
 
-	list := make([]*Content, 0)
+	var result []*Content
 
-	for rows.Next() {
-		var content Content
-		if err = rows.Scan(
-			&content.Id,
-			&content.UserId,
-			&content.DisplayName,
-			&content.Text,
-			&content.MediaUrl,
-			&content.Type,
-			&content.DeletedAt,
-			&content.CreatedAt); err != nil {
-			return nil, err
-		}
-
-		list = append(list, &content)
+	err = r.db.SelectContext(ctx, &result, query, args...)
+	if err != nil {
+		return nil, err
 	}
 
-	return list, nil
+	return result, nil
 }
 
 func (r repository) Update(ctx context.Context, model UpdateContent) error {
@@ -146,31 +125,33 @@ func (r repository) Update(ctx context.Context, model UpdateContent) error {
 	}
 
 	query := "UPDATE content.content SET "
-	var args []any
-	argsId := 1
+	params := map[string]any{
+		"id": model.Id,
+	}
+
+	var sets []string
 
 	if model.DisplayName != nil {
-		query += fmt.Sprintf("display_name = $%d, ", argsId)
-		args = append(args, *model.DisplayName)
-		argsId++
+		sets = append(sets, "display_name = :display_name")
+		params["display_name"] = *model.DisplayName
 	}
 	if model.Text != nil {
-		query += fmt.Sprintf("text = $%d, ", argsId)
-		args = append(args, *model.Text)
-		argsId++
+		sets = append(sets, "text = :text")
+		params["text"] = *model.Text
 	}
 	if model.MediaUrl != nil {
-		query += fmt.Sprintf("media_url = $%d, ", argsId)
-		args = append(args, *model.MediaUrl)
-		argsId++
+		sets = append(sets, "media_url = :media_url")
+		params["media_url"] = *model.MediaUrl
 	}
 
-	query = strings.TrimSuffix(query, ", ")
+	if len(sets) == 0 {
+		return errors.New("nothing to update")
+	}
 
-	query += fmt.Sprintf(" WHERE id = $%d", argsId)
-	args = append(args, model.Id)
+	query += strings.Join(sets, ", ")
+	query += " WHERE id = :id"
 
-	_, err := r.db.ExecContext(ctx, query, args...)
+	_, err := r.db.NamedExecContext(ctx, query, params)
 	return err
 }
 

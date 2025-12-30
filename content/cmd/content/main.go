@@ -6,7 +6,6 @@ import (
 	customMiddleware "content/internal/lib/logger/middleware"
 	"content/internal/lib/logger/sl"
 	"content/internal/storage/postgresql"
-	"database/sql"
 	"log"
 	"log/slog"
 	"net/http"
@@ -14,6 +13,7 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/chi/v5/middleware"
+	"github.com/jmoiron/sqlx"
 	"github.com/joho/godotenv"
 )
 
@@ -69,7 +69,7 @@ func setupLogger(env string) *slog.Logger {
 	return logger
 }
 
-func buildHandler(logger *slog.Logger, storage *sql.DB) http.Handler {
+func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
