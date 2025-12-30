@@ -39,8 +39,8 @@ require (
 )
 
 replace (
-	github.com/flores666/profileshare/tree/master/lib/api v0.0.0 => ../../profileshare/lib/api
-	github.com/flores666/profileshare/tree/master/lib/config v0.0.0 => ../../profileshare/lib/config
-	github.com/flores666/profileshare/tree/master/lib/logger v0.0.0 => ../../profileshare/lib/logger
-	github.com/flores666/profileshare/tree/master/lib/utils v0.0.0 => ../../profileshare/lib/utils
+	github.com/flores666/profileshare/tree/master/lib/api v0.0.0 => ./../../lib/api
+	github.com/flores666/profileshare/tree/master/lib/config v0.0.0 => ./../../lib/config
+	github.com/flores666/profileshare/tree/master/lib/logger v0.0.0 => ./../../lib/logger
+	github.com/flores666/profileshare/tree/master/lib/utils v0.0.0 => ./../../lib/utils
 )

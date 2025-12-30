@@ -32,7 +32,7 @@ go.work
 go.work.sum
 
 # env file
-content/.env
+.env
 
 # Editor/IDE
 .idea/
