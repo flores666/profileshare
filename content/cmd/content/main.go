@@ -80,10 +80,7 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	content.NewContentHandler(
-		content.NewService(content.NewRepository(storage), logger),
-		logger,
-	).RegisterRoutes(router)
+	content.NewContentHandler(content.NewService(content.NewRepository(storage), logger)).RegisterRoutes(router)
 
 	return router
 }

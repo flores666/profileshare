@@ -2,7 +2,6 @@ package content
 
 import (
 	"content/internal/lib/api"
-	"log/slog"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -13,18 +12,12 @@ const basePath = "/api/content"
 
 type Handler struct {
 	service Service
-	logger  *slog.Logger
 }
 
-func NewContentHandler(service Service, logger *slog.Logger) *Handler {
+func NewContentHandler(service Service) *Handler {
 	handler := &Handler{
-		logger:  logger,
 		service: service,
 	}
-
-	handler.logger = logger.With(
-		slog.String("caller", "handlers.content.api"),
-	)
 
 	return handler
 }
