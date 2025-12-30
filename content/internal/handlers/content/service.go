@@ -71,7 +71,7 @@ func (s service) GetById(ctx context.Context, id string) (*Content, *api.Validat
 
 	item, err := s.repository.GetById(ctx, id)
 	if err != nil {
-		s.logger.Warn("could not get content, error = ", err, "id = ", id)
+		s.logger.Error("could not get content, error = ", err, "id = ", id)
 		return nil, api.NewValidationErrors(ErrFailedQuery)
 	}
 
@@ -86,7 +86,7 @@ func (s service) GetByFilter(ctx context.Context, filter Filter) ([]*Content, *a
 	list, err := s.repository.Query(ctx, filter)
 
 	if err != nil {
-		s.logger.Warn("could not get content by filter, error = ", err, "filter = ", filter)
+		s.logger.Error("could not get content by filter, error = ", err, "filter = ", filter)
 		return nil, api.NewValidationErrors(ErrFailedQuery)
 	}
 
@@ -106,7 +106,7 @@ func (s service) Update(ctx context.Context, request UpdateContentRequest) *api.
 	}
 
 	if err := s.repository.Update(ctx, model); err != nil {
-		s.logger.Warn("could not update content, error = ", err, "id = ", request.Id)
+		s.logger.Error("could not update content, error = ", err, "id = ", request.Id)
 		return api.NewValidationErrors(ErrFailedSave)
 	}
 
@@ -116,7 +116,7 @@ func (s service) Update(ctx context.Context, request UpdateContentRequest) *api.
 func (s service) SafeDelete(ctx context.Context, id string) *api.ValidationErrors {
 	err := s.repository.SafeDelete(ctx, id)
 	if err != nil {
-		s.logger.Warn("could not safe delete content, error = ", err, "id = ", id)
+		s.logger.Error("could not safe delete content, error = ", err, "id = ", id)
 		return api.NewValidationErrors(ErrFailedSave)
 	}
 
