@@ -2,11 +2,6 @@ package users
 
 import "time"
 
-type CreateUserRequest struct {
-	Nickname string `json:"nickname"`
-	Email    string `json:"email"`
-}
-
 type QueryFilter struct {
 	Search string `json:"search"`
 }

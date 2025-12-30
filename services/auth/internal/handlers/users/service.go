@@ -2,17 +2,14 @@ package users
 
 import (
 	"api"
-	"auth/internal/handlers/users/repository"
+	"auth/internal/storage"
 	"context"
 	"log/slog"
-	"time"
-	"utils"
 )
 
 type Service interface {
-	Create(ctx context.Context, request CreateUserRequest) (*repository.User, *api.ValidationErrors)
-	GetById(ctx context.Context, id string) (*repository.User, *api.ValidationErrors)
-	GetByFilter(ctx context.Context, filter QueryFilter) ([]*repository.User, *api.ValidationErrors)
+	GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors)
+	GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors)
 	Update(ctx context.Context, request UpdateUserRequest) *api.ValidationErrors
 }
 
@@ -22,41 +19,18 @@ const (
 )
 
 type service struct {
-	repository repository.UsersRepository
+	repository Repository
 	logger     *slog.Logger
 }
 
-func NewService(repository repository.UsersRepository, logger *slog.Logger) Service {
+func NewService(repository Repository, logger *slog.Logger) Service {
 	return &service{
 		repository: repository,
 		logger:     logger,
 	}
 }
 
-func (s service) Create(ctx context.Context, request CreateUserRequest) (*repository.User, *api.ValidationErrors) {
-	if err := validateCreate(request); err != nil {
-		return nil, err
-	}
-
-	id := utils.NewGuid()
-	now := time.Now()
-
-	model := repository.User{
-		Id:        id,
-		Nickname:  request.Nickname,
-		Email:     request.Email,
-		CreatedAt: now,
-	}
-
-	if repoErr := s.repository.Create(ctx, model); repoErr != nil {
-		s.logger.Error("could not create content, error = ", repoErr.Error())
-		return nil, api.NewValidationErrors(ErrFailedSave)
-	}
-
-	return &model, nil
-}
-
-func (s service) GetById(ctx context.Context, id string) (*repository.User, *api.ValidationErrors) {
+func (s service) GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors) {
 	if err := validateId(id); err != nil {
 		return nil, err
 	}
@@ -70,12 +44,12 @@ func (s service) GetById(ctx context.Context, id string) (*repository.User, *api
 	return model, nil
 }
 
-func (s service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*repository.User, *api.ValidationErrors) {
+func (s service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors) {
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
 
-	list, err := s.repository.Query(ctx, getRepoFilter(filter))
+	list, err := s.repository.Query(ctx, filter)
 
 	if err != nil {
 		s.logger.Error("could not get users by filter, error = ", err, "filter = ", filter)
@@ -90,12 +64,10 @@ func (s service) Update(ctx context.Context, request UpdateUserRequest) *api.Val
 		return err
 	}
 
-	model := repository.UpdateUser{
-		Id:           request.Id,
-		Nickname:     request.Nickname,
-		Email:        request.Email,
-		RoleId:       request.RoleId,
-		BannedBefore: time.Time{},
+	model := storage.UpdateUser{
+		Id:       request.Id,
+		Nickname: request.Nickname,
+		Email:    request.Email,
 	}
 
 	if err := s.repository.Update(ctx, model); err != nil {
@@ -104,10 +76,4 @@ func (s service) Update(ctx context.Context, request UpdateUserRequest) *api.Val
 	}
 
 	return nil
-}
-
-func getRepoFilter(filter QueryFilter) repository.Filter {
-	return repository.Filter{
-		Search: filter.Search,
-	}
 }

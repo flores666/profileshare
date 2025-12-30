@@ -12,7 +12,7 @@ const (
 	StatusError = "Error"
 )
 
-// NewError creates [StatusError] api response.
+// NewError creates [StatusError] api handlers.
 // validations can be nil
 func NewError(msg string, validations *ValidationErrors) HttpResponse {
 	response := HttpResponse{
@@ -30,7 +30,7 @@ func NewError(msg string, validations *ValidationErrors) HttpResponse {
 	return response
 }
 
-// NewOk creates [StatusOk] api response.
+// NewOk creates [StatusOk] api handlers.
 // Payload can be nil
 func NewOk(payload any) HttpResponse {
 	response := HttpResponse{
@@ -44,7 +44,7 @@ func NewOk(payload any) HttpResponse {
 	return response
 }
 
-// Ok checks if response status is [StatusOk]
+// Ok checks if handlers status is [StatusOk]
 func (r HttpResponse) Ok() bool {
 	return r.Status == StatusOk
 }

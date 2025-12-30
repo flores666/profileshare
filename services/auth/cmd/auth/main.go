@@ -1,8 +1,8 @@
 package main
 
 import (
+	"auth/internal/handlers/auth"
 	"auth/internal/handlers/users"
-	"auth/internal/handlers/users/repository"
 	"auth/internal/storage/postgresql"
 	"config"
 	"log"
@@ -80,7 +80,8 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
 
-	users.NewUsersHandler(users.NewService(repository.NewRepository(storage), logger)).RegisterRoutes(router)
+	users.NewUsersHandler(users.NewService(users.NewRepository(storage), logger)).RegisterRoutes(router)
+	auth.NewAuthHandler(auth.NewService(auth.NewRepository(storage), logger)).RegisterRoutes(router)
 
 	return router
 }

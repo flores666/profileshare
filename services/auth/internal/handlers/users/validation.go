@@ -5,24 +5,6 @@ import (
 	"time"
 )
 
-func validateCreate(request CreateUserRequest) *api.ValidationErrors {
-	errs := &api.ValidationErrors{}
-
-	if len([]rune(request.Nickname)) < 2 {
-		errs.Add("Nickname", "must contain at least 2 characters")
-	}
-
-	if len([]rune(request.Email)) < 2 {
-		errs.Add("Email", "must contain at least 2 characters")
-	}
-
-	if errs.Ok() {
-		return nil
-	}
-
-	return errs
-}
-
 func validateId(id string) *api.ValidationErrors {
 	errs := &api.ValidationErrors{}
 
@@ -40,7 +22,7 @@ func validateId(id string) *api.ValidationErrors {
 func validateFilter(filter QueryFilter) *api.ValidationErrors {
 	errs := &api.ValidationErrors{}
 
-	if len([]rune(filter.Search)) < 2 {
+	if filter.Search != "" && len([]rune(filter.Search)) < 2 {
 		errs.Add("search", "must contain at least 2 characters")
 	}
 
