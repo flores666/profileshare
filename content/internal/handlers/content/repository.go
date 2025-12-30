@@ -177,10 +177,10 @@ func (r repository) exec(ctx context.Context, useTransaction bool, fn func(exec 
 
 		defer func() {
 			if rec := recover(); rec != nil {
-				tran.Rollback()
+				_ = tran.Rollback()
 				panic(rec)
 			} else if err != nil {
-				tran.Rollback()
+				_ = tran.Rollback()
 			} else {
 				err = tran.Commit()
 			}

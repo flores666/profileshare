@@ -35,7 +35,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	defer storage.Close()
+	defer func(storage *sqlx.DB) {
+		err := storage.Close()
+		logger.Warn("failed to close storage", sl.Error(err))
+	}(storage)
 
 	server := &http.Server{
 		Addr:         cfg.HttpServer.Address,
