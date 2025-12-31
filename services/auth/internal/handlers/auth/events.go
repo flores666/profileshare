@@ -4,9 +4,9 @@ const (
 	UserCreatedTopic = "users.registered"
 )
 
-type UserRegisteredEvent struct {
-	UserId         string
-	Email          string
-	Code           string
-	IdempotencyKey string
+type UserRegisteredMessage struct {
+	UserId         string `json:"userId"`
+	Email          string `json:"email"`
+	Code           string `json:"code"`
+	IdempotencyKey string `json:"idempotencyKey"`
 }

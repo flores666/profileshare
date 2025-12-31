@@ -30,7 +30,7 @@ func NewConsumer(brokers []string, topic, group string) Consumer {
 // Consume reads messages from Kafka and passes them to the handler.
 //
 // handler is a func that receives message in []bytes
-func (c consumer) Consume(ctx context.Context, handler func([]byte) error) error {
+func (c *consumer) Consume(ctx context.Context, handler func([]byte) error) error {
 	for {
 		msg, err := c.reader.ReadMessage(ctx)
 		if err != nil {

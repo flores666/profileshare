@@ -30,7 +30,7 @@ func NewProducer(brokers []string) Producer {
 }
 
 // Produce writes message to topic
-func (p producer) Produce(ctx context.Context, topic string, data any) error {
+func (p *producer) Produce(ctx context.Context, topic string, data any) error {
 	bytes, err := json.Marshal(data)
 	if err != nil {
 		return err
