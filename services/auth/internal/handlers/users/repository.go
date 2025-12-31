@@ -21,10 +21,10 @@ type repository struct {
 }
 
 func NewRepository(db *sqlx.DB) Repository {
-	return repository{db: db}
+	return &repository{db: db}
 }
 
-func (r repository) GetById(ctx context.Context, id string) (*storage.User, error) {
+func (r *repository) GetById(ctx context.Context, id string) (*storage.User, error) {
 	query := `
 		SELECT
 			id,
@@ -51,7 +51,7 @@ func (r repository) GetById(ctx context.Context, id string) (*storage.User, erro
 	return &user, nil
 }
 
-func (r repository) Query(ctx context.Context, filter QueryFilter) ([]*storage.User, error) {
+func (r *repository) Query(ctx context.Context, filter QueryFilter) ([]*storage.User, error) {
 	query := `
 		SELECT
 			id,
@@ -92,7 +92,7 @@ func (r repository) Query(ctx context.Context, filter QueryFilter) ([]*storage.U
 	return users, nil
 }
 
-func (r repository) Update(ctx context.Context, model storage.UpdateUser) error {
+func (r *repository) Update(ctx context.Context, model storage.UpdateUser) error {
 	query := "UPDATE users.users SET "
 	params := map[string]any{
 		"id": model.Id,

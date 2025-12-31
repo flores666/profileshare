@@ -28,7 +28,7 @@ const (
 )
 
 func NewService(repository Repository, logger *slog.Logger) Service {
-	srv := service{
+	srv := &service{
 		repository: repository,
 		logger:     logger,
 	}
@@ -38,7 +38,7 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s service) Create(ctx context.Context, request CreateContentRequest) (*Content, *api.ValidationErrors) {
+func (s *service) Create(ctx context.Context, request CreateContentRequest) (*Content, *api.ValidationErrors) {
 	if err := validateCreate(request); err != nil {
 		return nil, err
 	}
@@ -65,7 +65,7 @@ func (s service) Create(ctx context.Context, request CreateContentRequest) (*Con
 	return &model, nil
 }
 
-func (s service) GetById(ctx context.Context, id string) (*Content, *api.ValidationErrors) {
+func (s *service) GetById(ctx context.Context, id string) (*Content, *api.ValidationErrors) {
 	if err := validateId(id); err != nil {
 		return nil, err
 	}
@@ -79,7 +79,7 @@ func (s service) GetById(ctx context.Context, id string) (*Content, *api.Validat
 	return item, nil
 }
 
-func (s service) GetByFilter(ctx context.Context, filter Filter) ([]*Content, *api.ValidationErrors) {
+func (s *service) GetByFilter(ctx context.Context, filter Filter) ([]*Content, *api.ValidationErrors) {
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
@@ -94,7 +94,7 @@ func (s service) GetByFilter(ctx context.Context, filter Filter) ([]*Content, *a
 	return list, nil
 }
 
-func (s service) Update(ctx context.Context, request UpdateContentRequest) *api.ValidationErrors {
+func (s *service) Update(ctx context.Context, request UpdateContentRequest) *api.ValidationErrors {
 	if err := validateUpdate(request); err != nil {
 		return err
 	}
@@ -114,7 +114,7 @@ func (s service) Update(ctx context.Context, request UpdateContentRequest) *api.
 	return nil
 }
 
-func (s service) SafeDelete(ctx context.Context, id string) *api.ValidationErrors {
+func (s *service) SafeDelete(ctx context.Context, id string) *api.ValidationErrors {
 	err := s.repository.SafeDelete(ctx, id)
 	if err != nil {
 		s.logger.Error("could not safe delete content, error = ", err, "id = ", id)

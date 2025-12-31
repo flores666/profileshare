@@ -34,7 +34,7 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	}
 }
 
-func (s service) Register(ctx context.Context, request RegisterUserRequest) (*storage.User, *api.ValidationErrors) {
+func (s *service) Register(ctx context.Context, request RegisterUserRequest) (*storage.User, *api.ValidationErrors) {
 	if err := validateRegister(request); err != nil {
 		return nil, err
 	}

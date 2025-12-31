@@ -19,10 +19,10 @@ type repository struct {
 }
 
 func NewRepository(db *sqlx.DB) Repository {
-	return repository{db: db}
+	return &repository{db: db}
 }
 
-func (r repository) CreateUser(ctx context.Context, user *storage.User) error {
+func (r *repository) CreateUser(ctx context.Context, user *storage.User) error {
 	query := `
 		INSERT INTO authorization_service.users (
 			id,
@@ -45,7 +45,7 @@ func (r repository) CreateUser(ctx context.Context, user *storage.User) error {
 	return err
 }
 
-func (r repository) GetUser(ctx context.Context, email string) (*storage.User, error) {
+func (r *repository) GetUser(ctx context.Context, email string) (*storage.User, error) {
 	query := `SELECT id, nickname, email, password_hash, code_requested_at FROM authorization_service.users WHERE LOWER(email) = LOWER(:email)`
 
 	var user *storage.User

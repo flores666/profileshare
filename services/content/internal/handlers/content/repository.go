@@ -26,7 +26,7 @@ func NewRepository(db *sqlx.DB) Repository {
 	return &repository{db}
 }
 
-func (r repository) Create(ctx context.Context, content Content) (err error) {
+func (r *repository) Create(ctx context.Context, content Content) (err error) {
 	useTransaction := content.FolderId != ""
 
 	return r.exec(ctx, useTransaction, func(exec func(query string, args ...any) (sql.Result, error)) error {
@@ -46,7 +46,7 @@ func (r repository) Create(ctx context.Context, content Content) (err error) {
 	})
 }
 
-func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
+func (r *repository) GetById(ctx context.Context, id string) (*Content, error) {
 	query := `SELECT         
     	id,
         user_id,
@@ -72,7 +72,7 @@ func (r repository) GetById(ctx context.Context, id string) (*Content, error) {
 	return &content, nil
 }
 
-func (r repository) Query(ctx context.Context, filter Filter) ([]*Content, error) {
+func (r *repository) Query(ctx context.Context, filter Filter) ([]*Content, error) {
 	query := `
 		SELECT
 			c.id, c.user_id, c.display_name, c.text,
@@ -119,7 +119,7 @@ func (r repository) Query(ctx context.Context, filter Filter) ([]*Content, error
 	return result, nil
 }
 
-func (r repository) Update(ctx context.Context, model UpdateContent) error {
+func (r *repository) Update(ctx context.Context, model UpdateContent) error {
 	if model.Id == "" {
 		return errors.New("id is required")
 	}
@@ -155,7 +155,7 @@ func (r repository) Update(ctx context.Context, model UpdateContent) error {
 	return err
 }
 
-func (r repository) SafeDelete(ctx context.Context, id string) error {
+func (r *repository) SafeDelete(ctx context.Context, id string) error {
 	if id == "" {
 		return errors.New("id is required")
 	}
@@ -168,7 +168,7 @@ func (r repository) SafeDelete(ctx context.Context, id string) error {
 	return err
 }
 
-func (r repository) exec(ctx context.Context, useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {
+func (r *repository) exec(ctx context.Context, useTransaction bool, fn func(exec func(query string, args ...any) (sql.Result, error)) error) (err error) {
 	if useTransaction {
 		tran, tranErr := r.db.BeginTx(ctx, &sql.TxOptions{})
 		if tranErr != nil {

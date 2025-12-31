@@ -30,7 +30,7 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	}
 }
 
-func (s service) GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors) {
+func (s *service) GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors) {
 	if err := validateId(id); err != nil {
 		return nil, err
 	}
@@ -44,7 +44,7 @@ func (s service) GetById(ctx context.Context, id string) (*storage.User, *api.Va
 	return model, nil
 }
 
-func (s service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors) {
+func (s *service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors) {
 	if err := validateFilter(filter); err != nil {
 		return nil, err
 	}
@@ -59,7 +59,7 @@ func (s service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*storag
 	return list, nil
 }
 
-func (s service) Update(ctx context.Context, request UpdateUserRequest) *api.ValidationErrors {
+func (s *service) Update(ctx context.Context, request UpdateUserRequest) *api.ValidationErrors {
 	if err := validateUpdate(request); err != nil {
 		return err
 	}
