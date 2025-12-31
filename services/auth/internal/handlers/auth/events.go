@@ -5,7 +5,8 @@ const (
 )
 
 type UserRegisteredEvent struct {
-	UserId string
-	Email  string
-	Code   string
+	UserId         string
+	Email          string
+	Code           string
+	IdempotencyKey string
 }

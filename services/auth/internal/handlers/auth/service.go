@@ -108,9 +108,10 @@ func (s *service) createUser(ctx context.Context, request RegisterUserRequest) (
 
 func (s *service) publishUserRegistered(ctx context.Context, user *storage.User) {
 	event := &UserRegisteredEvent{
-		UserId: user.Id,
-		Email:  user.Email,
-		Code:   user.Code,
+		UserId:         user.Id,
+		Email:          user.Email,
+		Code:           user.Code,
+		IdempotencyKey: user.Id + ";" + user.Code,
 	}
 
 	if err := s.producer.Produce(ctx, UserCreatedTopic, event); err != nil {
