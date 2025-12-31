@@ -12,7 +12,8 @@ type Config struct {
 	Env              string     `yaml:"env" env-required:"true"`
 	ConnectionString string     `yaml:"db_connection_string" env-required:"true"`
 	HttpServer       HttpServer `yaml:"http_server" env-required:"true"`
-	Producer         Producer   `yaml:"producer" env-required:"true"`
+	Producer         Producer   `yaml:"producer"`
+	Consumer         Consumer   `yaml:"consumer"`
 }
 
 type HttpServer struct {
@@ -22,7 +23,11 @@ type HttpServer struct {
 }
 
 type Producer struct {
-	Brokers []string `yaml:"brokers" env-required:"true"`
+	Brokers []string `yaml:"brokers"`
+}
+
+type Consumer struct {
+	Brokers []string `yaml:"brokers"`
 }
 
 func MustLoad() *Config {
