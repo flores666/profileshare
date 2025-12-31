@@ -7,6 +7,7 @@ type User struct {
 	Nickname        string    `db:"nickname"`
 	Email           string    `db:"email"`
 	PasswordHash    string    `db:"password_hash"`
+	Code            string    `db:"code"`
 	CodeRequestedAt time.Time `db:"code_requested_at"`
 	IsConfirmed     bool      `db:"is_confirmed"`
 	RoleId          string    `db:"role_id"`

@@ -5,6 +5,7 @@ import (
 	"auth/internal/handlers/users"
 	"auth/internal/storage/postgresql"
 	"config"
+	"eventBus"
 	"log"
 	"log/slog"
 	plog "logger"
@@ -42,7 +43,7 @@ func main() {
 
 	server := &http.Server{
 		Addr:         cfg.HttpServer.Address,
-		Handler:      buildHandler(logger, storage),
+		Handler:      buildHandler(logger, storage, cfg),
 		ReadTimeout:  cfg.HttpServer.Timeout,
 		WriteTimeout: cfg.HttpServer.Timeout,
 		IdleTimeout:  cfg.HttpServer.IddleTimeout,
@@ -72,7 +73,7 @@ func setupLogger(env string) *slog.Logger {
 	return logger
 }
 
-func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
+func buildHandler(logger *slog.Logger, storage *sqlx.DB, cfg *config.Config) http.Handler {
 	router := chi.NewRouter()
 
 	router.Use(middleware.RequestID)
@@ -81,7 +82,11 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router.Use(middleware.URLFormat)
 
 	users.NewUsersHandler(users.NewService(users.NewRepository(storage), logger)).RegisterRoutes(router)
-	auth.NewAuthHandler(auth.NewService(auth.NewRepository(storage), logger)).RegisterRoutes(router)
+	auth.NewAuthHandler(auth.NewService(
+		auth.NewRepository(storage),
+		logger,
+		eventBus.NewProducer(cfg.Producer.Brokers),
+	)).RegisterRoutes(router)
 
 	return router
 }

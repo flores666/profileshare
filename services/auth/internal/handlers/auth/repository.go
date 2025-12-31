@@ -5,6 +5,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"time"
 
 	"github.com/jmoiron/sqlx"
 )
@@ -12,6 +13,7 @@ import (
 type Repository interface {
 	CreateUser(ctx context.Context, user *storage.User) error
 	GetUser(ctx context.Context, email string) (*storage.User, error)
+	UpdateCode(ctx context.Context, userId string, code string, time time.Time) error
 }
 
 type repository struct {
@@ -60,4 +62,11 @@ func (r *repository) GetUser(ctx context.Context, email string) (*storage.User, 
 	}
 
 	return user, nil
+}
+
+func (r *repository) UpdateCode(ctx context.Context, userId string, code string, time time.Time) error {
+	query := `UPDATE authorization_service.users SET code = $1, code_requested_at = $2 WHERE id = $3`
+
+	_, err := r.db.ExecContext(ctx, query, userId, time, code)
+	return err
 }
