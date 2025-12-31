@@ -15,8 +15,11 @@ type Service interface {
 }
 
 const (
-	ErrFailedSave  = "failed to save data"
-	ErrFailedQuery = "failed to query data"
+	ErrFailedSave         = "failed to save data"
+	ErrAlreadyRegistered  = "user already registered"
+	ErrFailedQuery        = "failed to query data"
+	ErrCodeRequestTimeout = "code request timeout"
+	CodeRequestTimeout    = time.Minute * 5
 )
 
 type service struct {
@@ -36,12 +39,30 @@ func (s service) Register(ctx context.Context, request RegisterUserRequest) (*st
 		return nil, err
 	}
 
-	// todo check already registered with email and nickname
+	existingUser, err := s.repository.GetUser(ctx, request.Email)
+	if err != nil {
+		s.logger.Error(err.Error())
+		return nil, api.NewValidationErrors(ErrFailedSave)
+	}
+
+	if existingUser != nil {
+		if existingUser.IsConfirmed {
+			return nil, api.NewValidationErrors(ErrAlreadyRegistered)
+		}
+
+		if existingUser.CodeRequestedAt.Add(CodeRequestTimeout).After(time.Now()) {
+			return nil, api.NewValidationErrors(ErrCodeRequestTimeout)
+		} else {
+			// todo send email again
+		}
+
+		return existingUser, nil
+	}
 
 	now := time.Now()
 	id := utils.NewGuid()
 
-	model := storage.User{
+	model := &storage.User{
 		Id:              id,
 		Nickname:        request.Nickname,
 		Email:           request.Email,
@@ -51,7 +72,7 @@ func (s service) Register(ctx context.Context, request RegisterUserRequest) (*st
 	}
 
 	//todo email confirm
-	if err := s.repository.Create(ctx, model); err != nil {
+	if err := s.repository.CreateUser(ctx, model); err != nil {
 		s.logger.Error("could not create user", slog.String("error", err.Error()))
 
 		return nil, api.NewValidationErrors(ErrFailedSave)
@@ -59,5 +80,5 @@ func (s service) Register(ctx context.Context, request RegisterUserRequest) (*st
 
 	model.PasswordHash = ""
 
-	return &model, nil
+	return model, nil
 }
