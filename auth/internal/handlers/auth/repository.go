@@ -48,20 +48,22 @@ func (r *repository) CreateUser(ctx context.Context, user *storage.User) error {
 }
 
 func (r *repository) GetUser(ctx context.Context, email string) (*storage.User, error) {
-	query := `SELECT id, nickname, email, password_hash, code_requested_at FROM authorization_service.users WHERE LOWER(email) = LOWER(:email)`
+	query := `
+		SELECT id, nickname, email, password_hash, code_requested_at
+		FROM authorization_service.users
+		WHERE LOWER(email) = LOWER($1)
+	`
 
-	var user *storage.User
-	err := r.db.GetContext(ctx, user, query, email)
-
+	var user storage.User
+	err := r.db.GetContext(ctx, &user, query, email)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
-
 		return nil, err
 	}
 
-	return user, nil
+	return &user, nil
 }
 
 func (r *repository) UpdateCode(ctx context.Context, userId string, code string, time time.Time) error {
