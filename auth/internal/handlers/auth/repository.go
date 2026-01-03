@@ -31,6 +31,7 @@ func (r *repository) CreateUser(ctx context.Context, user *storage.User) error {
 			nickname,
 			email,
 			password_hash,
+		    code,
 		    code_requested_at,
 			created_at
 		) VALUES (
@@ -38,6 +39,7 @@ func (r *repository) CreateUser(ctx context.Context, user *storage.User) error {
 			:nickname,
 			:email,
 			:password_hash,
+		    :code,
 		    :code_requested_at,
 			:created_at
 		)
@@ -69,6 +71,6 @@ func (r *repository) GetUser(ctx context.Context, email string) (*storage.User, 
 func (r *repository) UpdateCode(ctx context.Context, userId string, code string, time time.Time) error {
 	query := `UPDATE authorization_service.users SET code = $1, code_requested_at = $2 WHERE id = $3`
 
-	_, err := r.db.ExecContext(ctx, query, userId, time, code)
+	_, err := r.db.ExecContext(ctx, query, code, time, userId)
 	return err
 }
