@@ -1,21 +1,23 @@
 package users
 
 import (
+	"auth/internal/lib/mapper"
 	"auth/internal/storage"
 	"context"
-	"github.com/flores666/profileshare-lib/api"
 	"log/slog"
+
+	"github.com/flores666/profileshare-lib/api"
 )
 
 type Service interface {
-	GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors)
-	GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors)
-	Update(ctx context.Context, request UpdateUserRequest) *api.ValidationErrors
+	GetById(ctx context.Context, id string) api.AppResponse
+	GetByFilter(ctx context.Context, filter QueryFilter) api.AppResponse
+	Update(ctx context.Context, request UpdateUserRequest) api.AppResponse
 }
 
 const (
-	ErrFailedSave  = "failed to save data"
-	ErrFailedQuery = "failed to query data"
+	ErrFailedQuery = "Не удалось выполнить запрос"
+	ErrFailedSave  = "Не удалось сохранить данные"
 )
 
 type service struct {
@@ -30,38 +32,38 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	}
 }
 
-func (s *service) GetById(ctx context.Context, id string) (*storage.User, *api.ValidationErrors) {
+func (s *service) GetById(ctx context.Context, id string) api.AppResponse {
 	if err := validateId(id); err != nil {
-		return nil, err
+		return api.NewError("Ошибка проверки данных", err)
 	}
 
 	model, err := s.repository.GetById(ctx, id)
 	if err != nil {
 		s.logger.Error("could not get user, error = ", err, "id = ", id)
-		return nil, api.NewValidationErrors(ErrFailedQuery)
+		return api.NewError(ErrFailedQuery, nil)
 	}
 
-	return model, nil
+	return api.NewOk("Успешно", mapper.MapUserToDto(model))
 }
 
-func (s *service) GetByFilter(ctx context.Context, filter QueryFilter) ([]*storage.User, *api.ValidationErrors) {
+func (s *service) GetByFilter(ctx context.Context, filter QueryFilter) api.AppResponse {
 	if err := validateFilter(filter); err != nil {
-		return nil, err
+		return api.NewError("Ошибка проверки данных", err)
 	}
 
 	list, err := s.repository.Query(ctx, filter)
 
 	if err != nil {
 		s.logger.Error("could not get users by filter, error = ", err, "filter = ", filter)
-		return nil, api.NewValidationErrors(ErrFailedQuery)
+		return api.NewError(ErrFailedQuery, nil)
 	}
 
-	return list, nil
+	return api.NewOk("Успешно", mapper.MapUserSliceToDto(list))
 }
 
-func (s *service) Update(ctx context.Context, request UpdateUserRequest) *api.ValidationErrors {
+func (s *service) Update(ctx context.Context, request UpdateUserRequest) api.AppResponse {
 	if err := validateUpdate(request); err != nil {
-		return err
+		return api.NewError("Ошибка проверки данных", err)
 	}
 
 	model := storage.UpdateUser{
@@ -72,8 +74,17 @@ func (s *service) Update(ctx context.Context, request UpdateUserRequest) *api.Va
 
 	if err := s.repository.Update(ctx, model); err != nil {
 		s.logger.Error("could not update user, error = ", err, "id = ", request.Id)
-		return api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	return nil
+	response := api.NewOk("Успешно", nil)
+
+	user, err := s.repository.GetById(ctx, request.Id)
+	if err != nil {
+		s.logger.Error("could not get user, error = ", err, "id = ", request.Id)
+		return response
+	}
+
+	response.Data = mapper.MapUserToDto(user)
+	return response
 }

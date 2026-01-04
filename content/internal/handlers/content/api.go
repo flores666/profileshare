@@ -9,7 +9,11 @@ import (
 	"github.com/go-chi/render"
 )
 
-const basePath = "/api/content"
+const (
+	basePath      = "/api/content"
+	errValidation = "Ошибка проверки данных"
+	errMissingId  = "Отсутствует id"
+)
 
 type Handler struct {
 	service Service
@@ -34,16 +38,13 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		err := &api.ValidationErrors{}
-		err.Add("id", "is required")
-		respondError(w, r, http.StatusBadRequest, err)
-
+		respond(w, r, http.StatusBadRequest, api.NewError(errMissingId, nil))
 		return
 	}
 
-	response, err := h.service.GetById(r.Context(), id)
-	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, err)
+	response := h.service.GetById(r.Context(), id)
+	if !response.Ok() {
+		respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -55,19 +56,19 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 	err := &api.ValidationErrors{}
 
 	if filter.FolderId == "" {
-		err.Add("folderId", "is required")
+		err.Add("folderId", "поле обязательное")
 	}
 	if filter.UserId == "" {
-		err.Add("userId", "is required")
+		err.Add("userId", "поле обязательное")
 	}
 	if !err.Ok() {
-		respondError(w, r, http.StatusBadRequest, err)
+		respond(w, r, http.StatusBadRequest, api.NewError(errValidation, err))
 		return
 	}
 
-	response, err := h.service.GetByFilter(r.Context(), filter)
-	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, err)
+	response := h.service.GetByFilter(r.Context(), filter)
+	if !response.Ok() {
+		respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
@@ -77,14 +78,15 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	var request CreateContentRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		respond(w, r, http.StatusBadRequest, api.NewError(errValidation, nil))
 		return
 	}
 
 	// todo: авторизация и подстановка userId текущего авторизованного пользователя
-	response, err := h.service.Create(r.Context(), request)
-	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, err)
+	response := h.service.Create(r.Context(), request)
+	if !response.Ok() {
+		respond(w, r, http.StatusInternalServerError, response)
+		return
 	}
 
 	respond(w, r, http.StatusOK, response)
@@ -93,38 +95,35 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var request UpdateContentRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		respondError(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		respond(w, r, http.StatusBadRequest, api.NewError(errValidation, nil))
 		return
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	err := h.service.Update(r.Context(), request)
-	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, err)
+	response := h.service.Update(r.Context(), request)
+	if !response.Ok() {
+		respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
-	respond(w, r, http.StatusOK, nil)
+	respond(w, r, http.StatusOK, response)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		err := &api.ValidationErrors{}
-		err.Add("id", "is required")
-		respondError(w, r, http.StatusBadRequest, err)
-
+		respond(w, r, http.StatusBadRequest, api.NewError(errMissingId, nil))
 		return
 	}
 
 	// todo: авторизация и проверка на владение сущностью
-	err := h.service.SafeDelete(r.Context(), id)
-	if err != nil {
-		respondError(w, r, http.StatusInternalServerError, err)
+	response := h.service.SafeDelete(r.Context(), id)
+	if !response.Ok() {
+		respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
-	respond(w, r, http.StatusOK, err)
+	respond(w, r, http.StatusOK, response)
 }
 
 func getFilter(r *http.Request) Filter {
@@ -135,14 +134,7 @@ func getFilter(r *http.Request) Filter {
 	}
 }
 
-func respond(w http.ResponseWriter, r *http.Request, status int, payload any) {
+func respond(w http.ResponseWriter, r *http.Request, status int, response api.AppResponse) {
 	render.Status(r, status)
-	if payload != nil {
-		render.JSON(w, r, api.NewOk(payload))
-	}
-}
-
-func respondError(w http.ResponseWriter, r *http.Request, status int, err *api.ValidationErrors) {
-	render.Status(r, status)
-	render.JSON(w, r, api.NewError(err.Message, err))
+	render.JSON(w, r, response)
 }

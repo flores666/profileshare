@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"auth/internal/lib/mapper"
 	"auth/internal/lib/masking"
 	"auth/internal/lib/password"
 	"auth/internal/storage"
@@ -14,14 +15,13 @@ import (
 )
 
 type Service interface {
-	Register(ctx context.Context, request RegisterUserRequest) (*storage.User, *api.ValidationErrors)
+	Register(ctx context.Context, request RegisterUserRequest) api.AppResponse
 }
 
 const (
-	ErrFailedSave         = "failed to save data"
-	ErrAlreadyRegistered  = "user already registered"
-	ErrFailedQuery        = "failed to query data"
-	ErrCodeRequestTimeout = "code request timeout"
+	ErrFailedSave         = "Не удалось сохранить данные"
+	ErrAlreadyRegistered  = "Пользователь уже зарегистрирован"
+	ErrCodeRequestTimeout = "Повторите попытку через 5 минут"
 	CodeRequestTimeout    = time.Minute * 5
 )
 
@@ -39,15 +39,15 @@ func NewService(repository Repository, logger *slog.Logger, producer eventBus.Pr
 	}
 }
 
-func (s *service) Register(ctx context.Context, request RegisterUserRequest) (*storage.User, *api.ValidationErrors) {
+func (s *service) Register(ctx context.Context, request RegisterUserRequest) api.AppResponse {
 	if err := validateRegister(request); err != nil {
-		return nil, err
+		return api.NewError("Ошибка проверки данных", err)
 	}
 
 	existingUser, err := s.repository.GetUser(ctx, request.Email)
 	if err != nil {
 		s.logger.Error("failed to get user", slog.String("error", err.Error()))
-		return nil, api.NewValidationErrors(ErrFailedSave)
+		return api.NewError("Внутрення ошибка", nil)
 	}
 
 	if existingUser != nil {
@@ -57,13 +57,13 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) (*s
 	return s.createUser(ctx, request)
 }
 
-func (s *service) handleExistingUser(ctx context.Context, user *storage.User) (*storage.User, *api.ValidationErrors) {
+func (s *service) handleExistingUser(ctx context.Context, user *storage.User) api.AppResponse {
 	if user.IsConfirmed {
-		return nil, api.NewValidationErrors(ErrAlreadyRegistered)
+		return api.NewError(ErrAlreadyRegistered, nil)
 	}
 
 	if user.CodeRequestedAt.Add(CodeRequestTimeout).After(time.Now()) {
-		return nil, api.NewValidationErrors(ErrCodeRequestTimeout)
+		return api.NewError(ErrCodeRequestTimeout, nil)
 	}
 
 	user.Code = masking.RandStringBytesMask(10)
@@ -71,15 +71,15 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User) (*
 
 	if err := s.repository.UpdateCode(ctx, user.Id, user.Code, user.CodeRequestedAt); err != nil {
 		s.logger.Error("could not update user code", slog.String("error", err.Error()))
-		return nil, api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	s.publishUserRegistered(ctx, user)
+	s.publishUserRegistered(user)
 
-	return user, nil
+	return api.NewOk("Сообщение с новым кодом подтверждения отправлено на вашу почту", mapper.MapUserToDto(user))
 }
 
-func (s *service) createUser(ctx context.Context, request RegisterUserRequest) (*storage.User, *api.ValidationErrors) {
+func (s *service) createUser(ctx context.Context, request RegisterUserRequest) api.AppResponse {
 	now := time.Now()
 	id := utils.NewGuid()
 
@@ -95,19 +95,15 @@ func (s *service) createUser(ctx context.Context, request RegisterUserRequest) (
 
 	if err := s.repository.CreateUser(ctx, model); err != nil {
 		s.logger.Error("could not create user", slog.String("error", err.Error()))
-
-		return nil, api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	s.publishUserRegistered(ctx, model)
+	go s.publishUserRegistered(model)
 
-	model.PasswordHash = ""
-	model.Code = ""
-
-	return model, nil
+	return api.NewOk("Успешно", mapper.MapUserToDto(model))
 }
 
-func (s *service) publishUserRegistered(ctx context.Context, user *storage.User) {
+func (s *service) publishUserRegistered(user *storage.User) {
 	event := &UserRegisteredMessage{
 		UserId:         user.Id,
 		Email:          user.Email,
@@ -115,7 +111,7 @@ func (s *service) publishUserRegistered(ctx context.Context, user *storage.User)
 		IdempotencyKey: user.Id + ";" + user.Code,
 	}
 
-	if err := s.producer.Produce(ctx, UserCreatedTopic, event); err != nil {
+	if err := s.producer.Produce(context.Background(), UserCreatedTopic, event); err != nil {
 		s.logger.Error("failed to produce event", slog.String("error", err.Error()))
 	}
 }

@@ -10,11 +10,11 @@ import (
 )
 
 type Service interface {
-	Create(ctx context.Context, request CreateContentRequest) (*Content, *api.ValidationErrors)
-	Update(ctx context.Context, request UpdateContentRequest) *api.ValidationErrors
-	GetById(ctx context.Context, id string) (*Content, *api.ValidationErrors)
-	GetByFilter(ctx context.Context, filter Filter) ([]*Content, *api.ValidationErrors)
-	SafeDelete(ctx context.Context, id string) *api.ValidationErrors
+	Create(ctx context.Context, request CreateContentRequest) api.AppResponse
+	Update(ctx context.Context, request UpdateContentRequest) api.AppResponse
+	GetById(ctx context.Context, id string) api.AppResponse
+	GetByFilter(ctx context.Context, filter Filter) api.AppResponse
+	SafeDelete(ctx context.Context, id string) api.AppResponse
 }
 
 type service struct {
@@ -23,8 +23,10 @@ type service struct {
 }
 
 const (
-	ErrFailedSave  = "failed to save data"
-	ErrFailedQuery = "failed to query data"
+	ErrFailedSave  = "Не удалось сохранить данные"
+	ErrFailedQuery = "Не удалось выполнить запрос"
+	ErrValidation  = "Ошибка проверки данных"
+	Success        = "Успешно"
 )
 
 func NewService(repository Repository, logger *slog.Logger) Service {
@@ -38,9 +40,9 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s *service) Create(ctx context.Context, request CreateContentRequest) (*Content, *api.ValidationErrors) {
+func (s *service) Create(ctx context.Context, request CreateContentRequest) api.AppResponse {
 	if err := validateCreate(request); err != nil {
-		return nil, err
+		return api.NewError(ErrValidation, err)
 	}
 
 	id := utils.NewGuid()
@@ -59,44 +61,44 @@ func (s *service) Create(ctx context.Context, request CreateContentRequest) (*Co
 
 	if repoErr := s.repository.Create(ctx, model); repoErr != nil {
 		s.logger.Error("could not create content, error = ", repoErr.Error())
-		return nil, api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	return &model, nil
+	return api.NewOk(Success, model)
 }
 
-func (s *service) GetById(ctx context.Context, id string) (*Content, *api.ValidationErrors) {
+func (s *service) GetById(ctx context.Context, id string) api.AppResponse {
 	if err := validateId(id); err != nil {
-		return nil, err
+		return api.NewError(ErrValidation, err)
 	}
 
 	item, err := s.repository.GetById(ctx, id)
 	if err != nil {
 		s.logger.Error("could not get content, error = ", err, "id = ", id)
-		return nil, api.NewValidationErrors(ErrFailedQuery)
+		return api.NewError(ErrFailedQuery, nil)
 	}
 
-	return item, nil
+	return api.NewOk(Success, MapContentToDto(item))
 }
 
-func (s *service) GetByFilter(ctx context.Context, filter Filter) ([]*Content, *api.ValidationErrors) {
+func (s *service) GetByFilter(ctx context.Context, filter Filter) api.AppResponse {
 	if err := validateFilter(filter); err != nil {
-		return nil, err
+		return api.NewError(ErrValidation, err)
 	}
 
 	list, err := s.repository.Query(ctx, filter)
 
 	if err != nil {
 		s.logger.Error("could not get content by filter, error = ", err, "filter = ", filter)
-		return nil, api.NewValidationErrors(ErrFailedQuery)
+		return api.NewError(ErrFailedQuery, nil)
 	}
 
-	return list, nil
+	return api.NewOk(Success, MapContentSliceToDto(list))
 }
 
-func (s *service) Update(ctx context.Context, request UpdateContentRequest) *api.ValidationErrors {
+func (s *service) Update(ctx context.Context, request UpdateContentRequest) api.AppResponse {
 	if err := validateUpdate(request); err != nil {
-		return err
+		return api.NewError(ErrValidation, err)
 	}
 
 	model := UpdateContent{
@@ -108,18 +110,27 @@ func (s *service) Update(ctx context.Context, request UpdateContentRequest) *api
 
 	if err := s.repository.Update(ctx, model); err != nil {
 		s.logger.Error("could not update content, error = ", err, "id = ", request.Id)
-		return api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	return nil
+	response := api.NewOk(Success, nil)
+
+	content, err := s.repository.GetById(ctx, request.Id)
+	if err != nil {
+		s.logger.Error("could not get content, error = ", err, "id = ", request.Id)
+	} else {
+		response.Data = MapContentToDto(content)
+	}
+
+	return response
 }
 
-func (s *service) SafeDelete(ctx context.Context, id string) *api.ValidationErrors {
+func (s *service) SafeDelete(ctx context.Context, id string) api.AppResponse {
 	err := s.repository.SafeDelete(ctx, id)
 	if err != nil {
 		s.logger.Error("could not safe delete content, error = ", err, "id = ", id)
-		return api.NewValidationErrors(ErrFailedSave)
+		return api.NewError(ErrFailedSave, nil)
 	}
 
-	return nil
+	return api.NewOk(Success, nil)
 }

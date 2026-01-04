@@ -2,8 +2,9 @@ package auth
 
 import (
 	"auth/internal/lib/handlers"
-	"github.com/flores666/profileshare-lib/api"
 	"net/http"
+
+	"github.com/flores666/profileshare-lib/api"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -27,13 +28,13 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	var request RegisterUserRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		handlers.Error(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		handlers.Respond(w, r, http.StatusBadRequest, api.NewError(err.Error(), nil))
 		return
 	}
 
-	result, err := h.service.Register(r.Context(), request)
-	if err != nil {
-		handlers.Error(w, r, http.StatusInternalServerError, err)
+	result := h.service.Register(r.Context(), request)
+	if !result.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, result)
 		return
 	}
 

@@ -2,8 +2,9 @@ package users
 
 import (
 	"auth/internal/lib/handlers"
-	"github.com/flores666/profileshare-lib/api"
 	"net/http"
+
+	"github.com/flores666/profileshare-lib/api"
 
 	"github.com/go-chi/chi/v5"
 )
@@ -29,47 +30,44 @@ func (h *Handler) RegisterRoutes(r chi.Router) {
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	var request UpdateUserRequest
 	if err := api.GetBodyWithValidation(r, &request); err != nil {
-		handlers.Error(w, r, http.StatusBadRequest, api.NewValidationErrors(err.Error()))
+		handlers.Respond(w, r, http.StatusBadRequest, api.NewError(err.Error(), nil))
 		return
 	}
 
-	err := h.service.Update(r.Context(), request)
-	if err != nil {
-		handlers.Error(w, r, http.StatusInternalServerError, err)
+	result := h.service.Update(r.Context(), request)
+	if !result.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, result)
 		return
 	}
 
-	handlers.Respond(w, r, http.StatusOK, nil)
+	handlers.Respond(w, r, http.StatusOK, result)
 }
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	if id == "" {
-		err := &api.ValidationErrors{}
-		err.Add("id", "is required")
-		handlers.Error(w, r, http.StatusBadRequest, err)
-
+		handlers.Respond(w, r, http.StatusBadRequest, api.NewError("Отсутствует id пользователя", nil))
 		return
 	}
 
-	resp, err := h.service.GetById(r.Context(), id)
-	if err != nil {
-		handlers.Error(w, r, http.StatusInternalServerError, err)
+	response := h.service.GetById(r.Context(), id)
+	if !response.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
-	handlers.Respond(w, r, http.StatusOK, resp)
+	handlers.Respond(w, r, http.StatusOK, response)
 }
 
 func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 	filter := getFilter(r)
-	resp, err := h.service.GetByFilter(r.Context(), filter)
-	if err != nil {
-		handlers.Error(w, r, http.StatusInternalServerError, err)
+	response := h.service.GetByFilter(r.Context(), filter)
+	if !response.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, response)
 		return
 	}
 
-	handlers.Respond(w, r, http.StatusOK, resp)
+	handlers.Respond(w, r, http.StatusOK, response)
 }
 
 func getFilter(r *http.Request) QueryFilter {

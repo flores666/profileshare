@@ -3,7 +3,7 @@ module auth
 go 1.25
 
 require (
-	github.com/flores666/profileshare-lib v0.0.0-20260102182529-2c1e69bf9c05
+	github.com/flores666/profileshare-lib v0.0.0-20260103140614-0a569670956e
 	github.com/go-chi/chi/v5 v5.2.3
 	github.com/go-chi/render v1.0.3
 	github.com/jackc/pgx/v5 v5.8.0

@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"encoding/json"
+	"fmt"
 	"log/slog"
 )
 
@@ -26,7 +27,7 @@ func (e *emailsHandler) Handle(data []byte) error {
 		return err
 	}
 
-	e.logger.Info("got message to: &s, title: &s, please handle me!", message.To, message.Title)
+	e.logger.Info(fmt.Sprintf("got message to: %s, title: %s, please handle me!", message.To, message.Title))
 
 	return nil
 }

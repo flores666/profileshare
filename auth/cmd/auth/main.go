@@ -42,8 +42,10 @@ func main() {
 	}
 
 	defer func(storage *sqlx.DB) {
-		err := storage.Close()
-		logger.Warn("failed to close storage", plog.Error(err))
+		err = storage.Close()
+		if err != nil {
+			logger.Warn("failed to close storage", plog.Error(err))
+		}
 	}(storage)
 
 	server := &http.Server{

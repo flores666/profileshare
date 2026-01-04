@@ -42,7 +42,9 @@ func main() {
 
 	defer func(storage *sqlx.DB) {
 		err = storage.Close()
-		logger.Warn("failed to close storage", plog.Error(err))
+		if err != nil {
+			logger.Warn("failed to close storage", plog.Error(err))
+		}
 	}(storage)
 
 	logger.Info("starting application", slog.String("address", cfg.HttpServer.Address))

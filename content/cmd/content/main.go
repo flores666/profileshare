@@ -3,11 +3,12 @@ package main
 import (
 	"content/internal/handlers/content"
 	"content/internal/storage/postgresql"
-	"github.com/flores666/profileshare-lib/config"
 	"log"
 	"log/slog"
 	"net/http"
 	"os"
+
+	"github.com/flores666/profileshare-lib/config"
 
 	plog "github.com/flores666/profileshare-lib/logger"
 
@@ -40,8 +41,10 @@ func main() {
 	}
 
 	defer func(storage *sqlx.DB) {
-		err := storage.Close()
-		logger.Warn("failed to close storage", plog.Error(err))
+		err = storage.Close()
+		if err != nil {
+			logger.Warn("failed to close storage", plog.Error(err))
+		}
 	}(storage)
 
 	server := &http.Server{
