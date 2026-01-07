@@ -26,8 +26,8 @@ func NewJWTService(settings Settings) *JWTService {
 	return &JWTService{
 		accessSecret:  []byte(settings.AccessSecret),
 		refreshSecret: []byte(settings.RefreshSecret),
-		AccessTTL:     15 * time.Minute,
-		RefreshTTL:    7 * 24 * time.Hour,
+		AccessTTL:     time.Duration(settings.AccessTTL) * time.Minute,
+		RefreshTTL:    time.Duration(settings.RefreshTTL) * 24 * time.Hour,
 	}
 }
 
