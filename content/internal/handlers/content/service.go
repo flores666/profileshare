@@ -46,7 +46,7 @@ func (s *service) Create(ctx context.Context, request CreateContentRequest) api.
 	}
 
 	id := utils.NewGuid()
-	now := time.Now()
+	now := time.Now().UTC()
 
 	model := Content{
 		Id:          id,

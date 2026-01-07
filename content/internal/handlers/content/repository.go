@@ -160,7 +160,7 @@ func (r *repository) SafeDelete(ctx context.Context, id string) error {
 		return errors.New("id is required")
 	}
 
-	now := time.Now()
+	now := time.Now().UTC()
 
 	query := "UPDATE content.content SET deleted_at = $1 WHERE id = $2"
 	_, err := r.db.ExecContext(ctx, query, now, id)

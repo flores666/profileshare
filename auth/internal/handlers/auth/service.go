@@ -122,7 +122,7 @@ func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.A
 		return api.NewError("Неверный код подтверждения", nil)
 	}
 
-	if user.CodeRequestedAt.Add(AccConfirmTimeout).Before(time.Now()) {
+	if user.CodeRequestedAt.Add(AccConfirmTimeout).Before(time.Now().UTC()) {
 		return api.NewError("Ссылка устарела, запросите новый код подтверждения", nil)
 	}
 
@@ -163,8 +163,8 @@ func (s *service) issueTokens(ctx context.Context, userId string) (*security.Tok
 		UserId:       userId,
 		ProviderName: security.ProviderLumo,
 		Token:        tokens.RefreshToken,
-		ExpiresAt:    time.Now().Add(s.jwtService.RefreshTTL),
-		CreatedAt:    time.Now(),
+		ExpiresAt:    time.Now().UTC().Add(s.jwtService.RefreshTTL),
+		CreatedAt:    time.Now().UTC(),
 	})
 
 	if err != nil {
@@ -179,12 +179,12 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User, re
 		return api.NewError(ErrAlreadyRegistered, nil)
 	}
 
-	if user.CodeRequestedAt.Add(CodeRequestTimeout).After(time.Now()) {
+	if user.CodeRequestedAt.Add(CodeRequestTimeout).After(time.Now().UTC()) {
 		return api.NewError(ErrCodeRequestTimeout, nil)
 	}
 
 	user.Code = masking.RandStringBytesMask(10)
-	user.CodeRequestedAt = time.Now()
+	user.CodeRequestedAt = time.Now().UTC()
 
 	if err := s.unitOfWork.Users().Update(ctx, user.Id, user.Code, user.CodeRequestedAt, false); err != nil {
 		s.logger.Error("could not update user code", slog.String("error", err.Error()))
@@ -197,7 +197,7 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User, re
 }
 
 func (s *service) createUser(ctx context.Context, request RegisterUserRequest) api.AppResponse {
-	now := time.Now()
+	now := time.Now().UTC()
 	id := utils.NewGuid()
 
 	model := &storage.User{

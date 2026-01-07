@@ -48,7 +48,7 @@ func validateUpdate(request UpdateUserRequest) *api.ValidationErrors {
 		errs.Add("id", "is required")
 	}
 
-	if request.BannedBefore != nil && (*request.BannedBefore).Before(time.Now()) {
+	if request.BannedBefore != nil && (*request.BannedBefore).Before(time.Now().UTC()) {
 		errs.Add("bannedBefore", "is invalid")
 	}
 

@@ -68,7 +68,7 @@ func (e *emailsHandler) Handle(data []byte) error {
 			Subject:        message.Title,
 			Status:         statuses.Sent,
 			IdempotencyKey: message.IdempotencyKey,
-			CreatedAt:      time.Now(),
+			CreatedAt:      time.Now().UTC(),
 		}); err != nil {
 		e.logger.Error("repository save error", slog.String("error", err.Error()))
 		return err
