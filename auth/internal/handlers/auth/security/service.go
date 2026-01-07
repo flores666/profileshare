@@ -1,6 +1,8 @@
 package security
 
 import (
+	"crypto/rand"
+	"encoding/base64"
 	"errors"
 	"fmt"
 	"time"
@@ -36,21 +38,12 @@ func (s *JWTService) GenerateTokens(userId string) (*TokenPair, error) {
 		"type":    "access",
 	}
 
-	refreshClaims := jwt.MapClaims{
-		"user_id": userId,
-		"exp":     time.Now().Add(s.RefreshTTL).Unix(),
-		"type":    "refresh",
-	}
-
 	accessToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, accessClaims).SignedString(s.accessSecret)
 	if err != nil {
 		return nil, err
 	}
 
-	refreshToken, err := jwt.NewWithClaims(jwt.SigningMethodHS256, refreshClaims).SignedString(s.refreshSecret)
-	if err != nil {
-		return nil, err
-	}
+	refreshToken := generateSecureToken(32)
 
 	return &TokenPair{
 		AccessToken:  accessToken,
@@ -81,4 +74,10 @@ func (s *JWTService) GetValue(tokenStr, key string) (string, error) {
 	}
 
 	return value, nil
+}
+
+func generateSecureToken(length int) string {
+	bytes := make([]byte, length)
+	_, _ = rand.Read(bytes)
+	return base64.RawURLEncoding.EncodeToString(bytes)
 }
