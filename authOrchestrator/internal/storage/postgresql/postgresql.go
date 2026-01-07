@@ -3,6 +3,8 @@ package postgresql
 import (
 	"fmt"
 
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/stdlib"
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/jmoiron/sqlx"
 )
@@ -12,7 +14,16 @@ import (
 func NewStorage(driverName, connectionString string) (*sqlx.DB, error) {
 	const op = "storage.postgresql.NewStorage"
 
-	db, err := sqlx.Open(driverName, connectionString)
+	config, err := pgx.ParseConfig(connectionString)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", op, err)
+	}
+
+	config.DefaultQueryExecMode = pgx.QueryExecModeSimpleProtocol
+
+	conStr := stdlib.RegisterConnConfig(config)
+
+	db, err := sqlx.Open(driverName, conStr)
 	if err != nil {
 		return nil, fmt.Errorf("%s: %w", op, err)
 	}
