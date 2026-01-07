@@ -19,6 +19,10 @@ func validateRegister(request RegisterUserRequest) *api.ValidationErrors {
 		errs.Add("password", "must contain at least 8 characters")
 	}
 
+	if request.ReturnUrl == "" {
+		errs.Add("returnUrl", "is required")
+	}
+
 	if errs.Ok() {
 		return nil
 	}

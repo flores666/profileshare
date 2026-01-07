@@ -7,6 +7,6 @@ const (
 type UserRegisteredMessage struct {
 	UserId         string `json:"userId"`
 	Email          string `json:"email"`
-	Code           string `json:"code"`
+	ReturnUrl      string `json:"returnUrl"`
 	IdempotencyKey string `json:"idempotencyKey"`
 }

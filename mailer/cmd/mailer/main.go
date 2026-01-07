@@ -5,6 +5,7 @@ import (
 	"log"
 	"log/slog"
 	"mailer/internal/handlers"
+	"mailer/internal/handlers/mailer"
 	"mailer/internal/storage/postgresql"
 	"os"
 	"os/signal"
@@ -54,7 +55,10 @@ func main() {
 	defer stop()
 
 	go func() {
-		if consumeErr := emailsConsumer.Consume(ctx, handlers.NewEmailsHandler(logger).Handle); err != nil {
+		if consumeErr := emailsConsumer.Consume(
+			ctx,
+			handlers.NewEmailsHandler(logger, mailer.NewMailer(mailer.MustLoad()), handlers.NewRepository(storage)).Handle,
+		); err != nil {
 			logger.Error("consume error", slog.String("error", consumeErr.Error()))
 		}
 	}()

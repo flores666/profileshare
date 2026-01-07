@@ -7,6 +7,7 @@ import (
 	"auth/internal/storage"
 	"context"
 	"log/slog"
+	"net/url"
 	"time"
 
 	"github.com/flores666/profileshare-lib/api"
@@ -51,13 +52,13 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) api
 	}
 
 	if existingUser != nil {
-		return s.handleExistingUser(ctx, existingUser)
+		return s.handleExistingUser(ctx, existingUser, request.ReturnUrl)
 	}
 
 	return s.createUser(ctx, request)
 }
 
-func (s *service) handleExistingUser(ctx context.Context, user *storage.User) api.AppResponse {
+func (s *service) handleExistingUser(ctx context.Context, user *storage.User, redirectUrl string) api.AppResponse {
 	if user.IsConfirmed {
 		return api.NewError(ErrAlreadyRegistered, nil)
 	}
@@ -74,7 +75,7 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User) ap
 		return api.NewError(ErrFailedSave, nil)
 	}
 
-	s.publishUserRegistered(user)
+	go s.publishUserRegistered(user, redirectUrl)
 
 	return api.NewOk("Сообщение с новым кодом подтверждения отправлено на вашу почту", mapper.MapUserToDto(user))
 }
@@ -98,20 +99,39 @@ func (s *service) createUser(ctx context.Context, request RegisterUserRequest) a
 		return api.NewError(ErrFailedSave, nil)
 	}
 
-	go s.publishUserRegistered(model)
+	go s.publishUserRegistered(model, request.ReturnUrl)
 
 	return api.NewOk("Успешно", mapper.MapUserToDto(model))
 }
 
-func (s *service) publishUserRegistered(user *storage.User) {
+func (s *service) publishUserRegistered(user *storage.User, redirectUrl string) {
+	r, err := addQueryParam(redirectUrl, "code", user.Code)
+	if err != nil {
+		s.logger.Error("could not add query param", slog.String("error", err.Error()))
+		r = redirectUrl
+	}
+
 	event := &UserRegisteredMessage{
 		UserId:         user.Id,
 		Email:          user.Email,
-		Code:           user.Code,
+		ReturnUrl:      r,
 		IdempotencyKey: user.Id + ";" + user.Code,
 	}
 
 	if err := s.producer.Produce(context.Background(), UserCreatedTopic, event); err != nil {
 		s.logger.Error("failed to produce event", slog.String("error", err.Error()))
 	}
+}
+
+func addQueryParam(rawUrl, key, value string) (string, error) {
+	u, err := url.Parse(rawUrl)
+	if err != nil {
+		return "", err
+	}
+
+	q := u.Query()
+	q.Add(key, value)
+	u.RawQuery = q.Encode()
+
+	return u.String(), nil
 }

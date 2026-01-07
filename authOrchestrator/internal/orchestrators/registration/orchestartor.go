@@ -5,8 +5,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"github.com/flores666/profileshare-lib/eventBus"
 	"log/slog"
+
+	"github.com/flores666/profileshare-lib/eventBus"
 )
 
 type registrationOrchestrator struct {
@@ -41,37 +42,64 @@ func (o *registrationOrchestrator) Run(ctx context.Context) error {
 }
 
 func getEmailMessage(msg UserRegisteredMessage) EmailMessage {
-	htmlMessage := fmt.Sprintf(`<!DOCTYPE html>
+	htmlMessage := fmt.Sprintf(`
+<!DOCTYPE html>
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <title>Подтвердите регистрацию на Lumo</title>
+  <title>Подтверждение email — Lumo</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f5f6fa;
+      margin: 0;
+      padding: 0;
+    }
+    .container {
+      max-width: 600px;
+      margin: 40px auto;
+      background-color: #ffffff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+      padding: 20px 40px 40px 40px;
+    }
+    .button {
+      display: inline-block;
+      padding: 14px 24px;
+      background-color: #18181b;
+      color: #ffffff !important;
+      text-decoration: none;
+      border-radius: 6px;
+      font-weight: bold;
+    }
+    .footer {
+      margin-top: 30px;
+      font-size: 12px;
+      color: #888888;
+      text-align: center;
+    }
+  </style>
 </head>
-<body style="font-family: Arial, sans-serif; background-color: #f4f4f4; margin:0; padding:0;">
-  <table width="100%%" cellpadding="0" cellspacing="0" style="max-width:600px; margin:40px auto; background-color:#ffffff; border-radius:8px; overflow:hidden; box-shadow:0 2px 5px rgba(0,0,0,0.1);">
-    <tr>
-      <td style="padding:20px; text-align:center; background-color:#4B6FFF; color:#ffffff;">
-        <h1 style="margin:0; font-size:24px;">Добро пожаловать в Lumo!</h1>
-      </td>
-    </tr>
-    <tr>
-      <td style="padding:30px; color:#333333; font-size:16px; line-height:1.5;">
-        <p>Здравствуйте!</p>
-        <p>Спасибо за регистрацию на Lumo. Чтобы подтвердить свой аккаунт, пожалуйста, нажмите на кнопку ниже:</p>
-        <p style="text-align:center; margin:30px 0;">
-          <a href="%s" 
-             style="display:inline-block; padding:12px 24px; background-color:#4B6FFF; color:#ffffff; text-decoration:none; border-radius:6px; font-weight:bold;">
-            Подтвердить регистрацию
-          </a>
-        </p>
-        <p>Если вы не регистрировались на Lumo, просто проигнорируйте это письмо.</p>
-        <p>С уважением,<br>Команда Lumo</p>
-      </td>
-    </tr>
-  </table>
+<body>
+  <div class="container">
+    <h2>Подтвердите ваш email</h2>
+    <p>Здравствуйте!</p>
+    <p>Спасибо за регистрацию на платформе <strong>Lumo</strong>.</p>
+    <p>Пожалуйста, подтвердите ваш адрес электронной почты, нажав на кнопку ниже:</p>
+
+    <p style="text-align: center; margin: 30px 0;">
+      <a href="%s" class="button">Подтвердить email</a>
+    </p>
+
+    <p>Если вы не регистрировались в Lumo, просто проигнорируйте это письмо.</p>
+
+    <div class="footer">
+      &copy; 2025 Lumo. Все права защищены.
+    </div>
+  </div>
 </body>
-</html>`, "https://www.lumo.com")
-	//todo ссылку подставить
+</html>
+`, msg.ReturnUrl)
 
 	return EmailMessage{
 		To:             msg.Email,
