@@ -20,12 +20,15 @@ import (
 type Service interface {
 	Register(ctx context.Context, request RegisterUserRequest) api.AppResponse
 	Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse
+	Login(ctx context.Context, request LoginUserRequest) api.AppResponse
 }
 
 const (
 	ErrFailedSave         = "Не удалось сохранить данные"
 	ErrAlreadyRegistered  = "Пользователь уже зарегистрирован"
 	ErrCodeRequestTimeout = "Повторите попытку через 5 минут"
+	ErrInternal           = "Внутрення ошибка"
+	ErrInvalidCredentials = "Неверные логин или пароль"
 	CodeRequestTimeout    = time.Minute * 2
 	AccConfirmTimeout     = time.Minute * 10
 	Success               = "Успешно"
@@ -60,7 +63,7 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) api
 	existingUser, err := s.unitOfWork.Users().GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		s.logger.Error("failed to get user", slog.String("error", err.Error()))
-		return api.NewError("Внутрення ошибка", nil)
+		return api.NewError(ErrInternal, nil)
 	}
 
 	if existingUser != nil {
@@ -68,6 +71,36 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) api
 	}
 
 	return s.createUser(ctx, request)
+}
+
+func (s *service) Login(ctx context.Context, request LoginUserRequest) api.AppResponse {
+	if err := validateLogin(request); err != nil {
+		return api.NewError("Ошибка проверки данных", err)
+	}
+
+	user, err := s.unitOfWork.Users().GetUserByEmail(ctx, request.Email)
+	if err != nil {
+		s.logger.Error("failed to get user", slog.String("error", err.Error()))
+		return api.NewError(ErrInternal, nil)
+	}
+
+	ok, err := password.Verify(request.Password, user.PasswordHash)
+	if err != nil {
+		s.logger.Error("failed to verify password", slog.String("error", err.Error()))
+		return api.NewError(ErrInvalidCredentials, nil)
+	}
+
+	if !ok {
+		return api.NewError(ErrInvalidCredentials, nil)
+	}
+
+	tokens, err := s.issueTokens(ctx, user.Id)
+	if err != nil {
+		s.logger.Error("failed to issue tokens", slog.String("error", err.Error()))
+		return api.NewError(ErrInternal, nil)
+	}
+
+	return api.NewOk(Success, tokens)
 }
 
 func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse {

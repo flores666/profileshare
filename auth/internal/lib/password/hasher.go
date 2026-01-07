@@ -47,7 +47,7 @@ func Hash(password string) string {
 // Verify проверяет пароль против сохранённого хеша
 func Verify(password, encodedHash string) (bool, error) {
 	parts := strings.Split(encodedHash, "$")
-	if len(parts) != 6 {
+	if len(parts) != 5 {
 		return false, errors.New("invalid hash format")
 	}
 
@@ -55,17 +55,17 @@ func Verify(password, encodedHash string) (bool, error) {
 	var iterations uint32
 	var parallelism uint8
 
-	_, err := fmt.Sscanf(parts[3], "m=%d,t=%d,p=%d", &memory, &iterations, &parallelism)
+	_, err := fmt.Sscanf(parts[2], "m=%d,t=%d,p=%d", &memory, &iterations, &parallelism)
 	if err != nil {
 		return false, err
 	}
 
-	salt, err := base64.RawStdEncoding.DecodeString(parts[4])
+	salt, err := base64.RawStdEncoding.DecodeString(parts[3])
 	if err != nil {
 		return false, err
 	}
 
-	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[5])
+	expectedHash, err := base64.RawStdEncoding.DecodeString(parts[4])
 	if err != nil {
 		return false, err
 	}

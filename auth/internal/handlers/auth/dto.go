@@ -11,3 +11,8 @@ type ConfirmUserRequest struct {
 	UserId string `json:"userId" validate:"required"`
 	Code   string `json:"code" validate:"required"`
 }
+
+type LoginUserRequest struct {
+	Email    string `json:"email" validate:"required,email"`
+	Password string `json:"password" validate:"required"`
+}
