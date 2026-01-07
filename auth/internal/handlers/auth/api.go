@@ -23,6 +23,7 @@ func NewAuthHandler(service Service) *Handler {
 
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post(BaseRoutePath+"/register", h.register)
+	r.Post(BaseRoutePath+"/confirm", h.confirm)
 }
 
 func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
@@ -33,6 +34,22 @@ func (h *Handler) register(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := h.service.Register(r.Context(), request)
+	if !result.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, result)
+		return
+	}
+
+	handlers.Respond(w, r, http.StatusOK, result)
+}
+
+func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
+	var request ConfirmUserRequest
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		handlers.Respond(w, r, http.StatusBadRequest, api.NewError(err.Error(), nil))
+		return
+	}
+
+	result := h.service.Confirm(r.Context(), request)
 	if !result.Ok() {
 		handlers.Respond(w, r, http.StatusInternalServerError, result)
 		return

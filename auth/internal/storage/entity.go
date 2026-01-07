@@ -20,3 +20,15 @@ type UpdateUser struct {
 	Nickname *string `db:"nickname"`
 	Email    *string `db:"email"`
 }
+
+type Token struct {
+	Id              string    `db:"id"`
+	UserId          string    `db:"user_id"`
+	ProviderName    string    `db:"provider_name"`
+	Token           string    `db:"token"`
+	ExpiresAt       time.Time `db:"expires_at"`
+	CreatedAt       time.Time `db:"created_at"`
+	ReplacedByToken string    `db:"replaced_by_token"`
+	RevokedByIp     string    `db:"revoked_by_ip"`
+	RevokedAt       time.Time `db:"revoked_at"`
+}

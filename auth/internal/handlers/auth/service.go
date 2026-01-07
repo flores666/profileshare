@@ -1,6 +1,8 @@
 package auth
 
 import (
+	"auth/internal/handlers/auth/repository"
+	"auth/internal/handlers/auth/security"
 	"auth/internal/lib/mapper"
 	"auth/internal/lib/masking"
 	"auth/internal/lib/password"
@@ -17,26 +19,36 @@ import (
 
 type Service interface {
 	Register(ctx context.Context, request RegisterUserRequest) api.AppResponse
+	Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse
 }
 
 const (
 	ErrFailedSave         = "Не удалось сохранить данные"
 	ErrAlreadyRegistered  = "Пользователь уже зарегистрирован"
 	ErrCodeRequestTimeout = "Повторите попытку через 5 минут"
-	CodeRequestTimeout    = time.Minute * 5
+	CodeRequestTimeout    = time.Minute * 2
+	AccConfirmTimeout     = time.Minute * 10
+	Success               = "Успешно"
 )
 
 type service struct {
-	repository Repository
+	unitOfWork repository.UnitOfWork
 	logger     *slog.Logger
 	producer   eventBus.Producer
+	jwtService *security.JWTService
 }
 
-func NewService(repository Repository, logger *slog.Logger, producer eventBus.Producer) Service {
+func NewService(
+	unitOfWork repository.UnitOfWork,
+	jwtService *security.JWTService,
+	logger *slog.Logger,
+	producer eventBus.Producer,
+) Service {
 	return &service{
-		repository: repository,
 		logger:     logger,
 		producer:   producer,
+		jwtService: jwtService,
+		unitOfWork: unitOfWork,
 	}
 }
 
@@ -45,7 +57,7 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) api
 		return api.NewError("Ошибка проверки данных", err)
 	}
 
-	existingUser, err := s.repository.GetUser(ctx, request.Email)
+	existingUser, err := s.unitOfWork.Users().GetUserByEmail(ctx, request.Email)
 	if err != nil {
 		s.logger.Error("failed to get user", slog.String("error", err.Error()))
 		return api.NewError("Внутрення ошибка", nil)
@@ -56,6 +68,77 @@ func (s *service) Register(ctx context.Context, request RegisterUserRequest) api
 	}
 
 	return s.createUser(ctx, request)
+}
+
+func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse {
+	user, err := s.unitOfWork.Users().GetUserById(ctx, request.UserId)
+	if err != nil {
+		s.logger.Error("failed to get user", slog.String("error", err.Error()))
+		return api.NewError("Внутренняя ошибка", nil)
+	}
+
+	if user == nil {
+		return api.NewError("Неверная ссылка или пользователь не найден", nil)
+	}
+
+	if user.IsConfirmed {
+		return api.NewError(ErrAlreadyRegistered, nil)
+	}
+
+	if user.Code != request.Code {
+		return api.NewError("Неверный код подтверждения", nil)
+	}
+
+	if user.CodeRequestedAt.Add(AccConfirmTimeout).Before(time.Now()) {
+		return api.NewError("Ссылка устарела, запросите новый код подтверждения", nil)
+	}
+
+	var response api.AppResponse
+	err = s.unitOfWork.Do(ctx, func(ctx context.Context) error {
+		if uowError := s.unitOfWork.Users().Update(ctx, user.Id, "", time.Time{}, true); uowError != nil {
+			s.logger.Error("failed to confirm user", slog.String("error", uowError.Error()))
+			return uowError
+		}
+
+		tokens, uowError := s.issueTokens(ctx, user.Id)
+		if uowError != nil {
+			s.logger.Error("failed to issue tokens after confirmation", slog.String("error", uowError.Error()))
+			return uowError
+		}
+
+		response = api.NewOk("Аккаунт успешно подтверждён", tokens)
+
+		return nil
+	})
+
+	if err != nil {
+		s.logger.Error("failed to confirm user", slog.String("error", err.Error()))
+		return api.NewError("Не удалось подтвердить пользователя", nil)
+	}
+
+	return response
+}
+
+func (s *service) issueTokens(ctx context.Context, userId string) (*security.TokenPair, error) {
+	tokens, err := s.jwtService.GenerateTokens(userId)
+	if err != nil {
+		return nil, err
+	}
+
+	err = s.unitOfWork.Tokens().SaveToken(ctx, &storage.Token{
+		Id:           utils.NewGuid(),
+		UserId:       userId,
+		ProviderName: security.ProviderLumo,
+		Token:        tokens.RefreshToken,
+		ExpiresAt:    time.Now().Add(s.jwtService.RefreshTTL),
+		CreatedAt:    time.Now(),
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	return tokens, nil
 }
 
 func (s *service) handleExistingUser(ctx context.Context, user *storage.User, redirectUrl string) api.AppResponse {
@@ -70,12 +153,12 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User, re
 	user.Code = masking.RandStringBytesMask(10)
 	user.CodeRequestedAt = time.Now()
 
-	if err := s.repository.UpdateCode(ctx, user.Id, user.Code, user.CodeRequestedAt); err != nil {
+	if err := s.unitOfWork.Users().Update(ctx, user.Id, user.Code, user.CodeRequestedAt, false); err != nil {
 		s.logger.Error("could not update user code", slog.String("error", err.Error()))
 		return api.NewError(ErrFailedSave, nil)
 	}
 
-	go s.publishUserRegistered(user, redirectUrl)
+	go s.publishUser(user, redirectUrl)
 
 	return api.NewOk("Сообщение с новым кодом подтверждения отправлено на вашу почту", mapper.MapUserToDto(user))
 }
@@ -94,17 +177,17 @@ func (s *service) createUser(ctx context.Context, request RegisterUserRequest) a
 		CreatedAt:       now,
 	}
 
-	if err := s.repository.CreateUser(ctx, model); err != nil {
+	if err := s.unitOfWork.Users().CreateUser(ctx, model); err != nil {
 		s.logger.Error("could not create user", slog.String("error", err.Error()))
 		return api.NewError(ErrFailedSave, nil)
 	}
 
-	go s.publishUserRegistered(model, request.ReturnUrl)
+	go s.publishUser(model, request.ReturnUrl)
 
-	return api.NewOk("Успешно", mapper.MapUserToDto(model))
+	return api.NewOk(Success, mapper.MapUserToDto(model))
 }
 
-func (s *service) publishUserRegistered(user *storage.User, redirectUrl string) {
+func (s *service) publishUser(user *storage.User, redirectUrl string) {
 	r, err := addQueryParam(redirectUrl, "code", user.Code)
 	if err != nil {
 		s.logger.Error("could not add query param", slog.String("error", err.Error()))

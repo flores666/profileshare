@@ -2,6 +2,8 @@ package main
 
 import (
 	"auth/internal/handlers/auth"
+	"auth/internal/handlers/auth/repository"
+	"auth/internal/handlers/auth/security"
 	"auth/internal/handlers/users"
 	"auth/internal/storage/postgresql"
 	"log"
@@ -90,7 +92,8 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB, cfg *config.Config) htt
 
 	users.NewUsersHandler(users.NewService(users.NewRepository(storage), logger)).RegisterRoutes(router)
 	auth.NewAuthHandler(auth.NewService(
-		auth.NewRepository(storage),
+		repository.NewUnitOfWork(storage),
+		security.NewJWTService(security.MustLoadSettings()),
 		logger,
 		eventBus.NewProducer(cfg.Producer.Brokers),
 	)).RegisterRoutes(router)

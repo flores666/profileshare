@@ -6,3 +6,8 @@ type RegisterUserRequest struct {
 	Password  string `json:"password" validate:"required"`
 	ReturnUrl string `json:"returnUrl" validate:"required,url"`
 }
+
+type ConfirmUserRequest struct {
+	UserId string `json:"userId" validate:"required"`
+	Code   string `json:"code" validate:"required"`
+}
