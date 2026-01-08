@@ -3,7 +3,7 @@ module content
 go 1.25
 
 require (
-	github.com/flores666/profileshare-lib v0.0.0-20260103140614-0a569670956e
+	github.com/flores666/profileshare-lib v0.0.0-20260107232438-b42a10b34b87
 	github.com/jackc/pgx/v5 v5.8.0
 	github.com/joho/godotenv v1.5.1
 )

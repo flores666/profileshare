@@ -6,14 +6,8 @@ github.com/creack/pty v1.1.9/go.mod h1:oKZEueFk5CKHvIhNR5MUki03XCEU+Q6VDXinZuGJ3
 github.com/davecgh/go-spew v1.1.0/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c=
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
-github.com/flores666/profileshare-lib v0.0.0-20260102120633-c4ef082e5991 h1:tqwBGvkEfeRTk02e1MQxgDIrY/zZpHjgtNZ+C7U3JLY=
-github.com/flores666/profileshare-lib v0.0.0-20260102120633-c4ef082e5991/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
-github.com/flores666/profileshare-lib v0.0.0-20260102134922-3cafce0e9616 h1:bsh1TthHOUPL5OHuoyDSfCzQZjlvzRGwtDg9x7meQ48=
-github.com/flores666/profileshare-lib v0.0.0-20260102134922-3cafce0e9616/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
-github.com/flores666/profileshare-lib v0.0.0-20260102182529-2c1e69bf9c05 h1:QlNp8RkNc8aZTlN9O8JowM5pmwVrSve1V7FUYTNskIc=
-github.com/flores666/profileshare-lib v0.0.0-20260102182529-2c1e69bf9c05/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
-github.com/flores666/profileshare-lib v0.0.0-20260103140614-0a569670956e h1:0w1dffJ+81F6N7sqhXSeWaA3+3SsT0y5n2GefcbfGiM=
-github.com/flores666/profileshare-lib v0.0.0-20260103140614-0a569670956e/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
+github.com/flores666/profileshare-lib v0.0.0-20260107232438-b42a10b34b87 h1:AhfjQeJ3dhXSf1k8d4aE6ltZHsRLPyV2bN3uKXHoRH4=
+github.com/flores666/profileshare-lib v0.0.0-20260107232438-b42a10b34b87/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=
 github.com/go-chi/chi/v5 v5.2.3/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
 github.com/go-sql-driver/mysql v1.8.1 h1:LedoTUt/eveggdHS9qUFC1EFSa8bU2+1pZjSRpvNJ1Y=
