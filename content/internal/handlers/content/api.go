@@ -47,12 +47,7 @@ func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := h.service.GetById(r.Context(), id)
-	if !response.Ok() {
-		respond(w, r, http.StatusInternalServerError, response)
-		return
-	}
-
-	respond(w, r, http.StatusOK, response)
+	writeResponse(w, r, response)
 }
 
 func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
@@ -71,12 +66,7 @@ func (h *Handler) getByFilter(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := h.service.GetByFilter(r.Context(), filter)
-	if !response.Ok() {
-		respond(w, r, http.StatusInternalServerError, response)
-		return
-	}
-
-	respond(w, r, http.StatusOK, response)
+	writeResponse(w, r, response)
 }
 
 func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
@@ -87,12 +77,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := h.service.Create(r.Context(), request, getUserId(r))
-	if !response.Ok() {
-		respond(w, r, http.StatusInternalServerError, response)
-		return
-	}
-
-	respond(w, r, http.StatusOK, response)
+	writeResponse(w, r, response)
 }
 
 func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
@@ -103,12 +88,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := h.service.Update(r.Context(), request, getUserId(r))
-	if !response.Ok() {
-		respond(w, r, http.StatusInternalServerError, response)
-		return
-	}
-
-	respond(w, r, http.StatusOK, response)
+	writeResponse(w, r, response)
 }
 
 func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
@@ -119,12 +99,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 	}
 
 	response := h.service.SafeDelete(r.Context(), id, getUserId(r))
-	if !response.Ok() {
-		respond(w, r, http.StatusInternalServerError, response)
-		return
-	}
-
-	respond(w, r, http.StatusOK, response)
+	writeResponse(w, r, response)
 }
 
 func getFilter(r *http.Request) Filter {
@@ -142,4 +117,23 @@ func respond(w http.ResponseWriter, r *http.Request, status int, response api.Ap
 
 func getUserId(r *http.Request) string {
 	return r.Context().Value("user_id").(string)
+}
+
+func writeResponse(w http.ResponseWriter, r *http.Request, resp api.AppResponse) {
+	if resp.Ok() {
+		render.Status(r, http.StatusOK)
+		render.JSON(w, r, resp)
+		return
+	}
+
+	switch resp.Message {
+	case ErrForbidden:
+		render.Status(r, http.StatusForbidden)
+	case ErrValidation:
+		render.Status(r, http.StatusBadRequest)
+	default:
+		render.Status(r, http.StatusInternalServerError)
+	}
+
+	render.JSON(w, r, resp)
 }

@@ -23,11 +23,11 @@ type service struct {
 }
 
 const (
-	ErrFailedSave         = "Не удалось сохранить данные"
-	ErrFailedQuery        = "Не удалось выполнить запрос"
-	ErrValidation         = "Ошибка проверки данных"
-	ErrInvalidCredentials = "Запись вам не принадлежит"
-	Success               = "Успешно"
+	ErrFailedSave  = "Не удалось сохранить данные"
+	ErrFailedQuery = "Не удалось выполнить запрос"
+	ErrValidation  = "Ошибка проверки данных"
+	ErrForbidden   = "Запись вам не принадлежит"
+	Success        = "Успешно"
 )
 
 func NewService(repository Repository, logger *slog.Logger) Service {
@@ -108,7 +108,7 @@ func (s *service) Update(ctx context.Context, request UpdateContentRequest, user
 		return api.NewError(ErrFailedQuery, nil)
 	}
 	if content.UserId != userId {
-		return api.NewError(ErrInvalidCredentials, nil)
+		return api.NewError(ErrForbidden, nil)
 	}
 
 	model := UpdateContent{
@@ -133,7 +133,7 @@ func (s *service) SafeDelete(ctx context.Context, id string, userId string) api.
 		return api.NewError(ErrFailedQuery, nil)
 	}
 	if content.UserId != userId {
-		return api.NewError(ErrInvalidCredentials, nil)
+		return api.NewError(ErrForbidden, nil)
 	}
 
 	err = s.repository.SafeDelete(ctx, id)
