@@ -11,10 +11,6 @@ var contentTypes = []string{"photo", "video"}
 func validateCreate(request CreateContentRequest) *api.ValidationErrors {
 	errs := &api.ValidationErrors{}
 
-	if request.UserId == "" {
-		errs.Add("userId", "is required")
-	}
-
 	if request.DisplayName == "" || len([]rune(request.DisplayName)) <= 2 {
 		errs.Add("displayName", "must be at least 2 characters")
 	}
