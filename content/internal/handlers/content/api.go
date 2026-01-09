@@ -27,12 +27,16 @@ func NewContentHandler(service Service) *Handler {
 	return handler
 }
 
-func (h *Handler) RegisterRoutes(r chi.Router) {
+func (h *Handler) RegisterRoutes(r chi.Router, authMiddleware func(http.Handler) http.Handler) {
 	r.Get(basePath+"/{id}", h.getById)
 	r.Get(basePath, h.getByFilter)
-	r.Post(basePath, h.create)
-	r.Put(basePath, h.update)
-	r.Delete(basePath+"/{id}", h.delete)
+
+	r.Group(func(r chi.Router) {
+		r.Use(authMiddleware)
+		r.Post(basePath, h.create)
+		r.Put(basePath, h.update)
+		r.Delete(basePath+"/{id}", h.delete)
+	})
 }
 
 func (h *Handler) getById(w http.ResponseWriter, r *http.Request) {

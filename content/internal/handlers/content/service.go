@@ -26,7 +26,7 @@ const (
 	ErrFailedSave         = "Не удалось сохранить данные"
 	ErrFailedQuery        = "Не удалось выполнить запрос"
 	ErrValidation         = "Ошибка проверки данных"
-	ErrInvalidCredentials = "Запись вам не пренадлежит"
+	ErrInvalidCredentials = "Запись вам не принадлежит"
 	Success               = "Успешно"
 )
 

@@ -87,9 +87,9 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router.Use(plog.NewRequestLogMiddleware(logger))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
-	libmiddleware.AuthMiddleware([]byte(os.Getenv("SECURITY__ACCESS_SECRET")))
+	authMiddleware := libmiddleware.AuthMiddleware([]byte(os.Getenv("SECURITY__ACCESS_SECRET")))
 
-	content.NewContentHandler(content.NewService(content.NewRepository(storage), logger)).RegisterRoutes(router)
+	content.NewContentHandler(content.NewService(content.NewRepository(storage), logger)).RegisterRoutes(router, authMiddleware)
 
 	return router
 }
