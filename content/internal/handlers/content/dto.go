@@ -1,7 +1,6 @@
 package content
 
 type CreateContentRequest struct {
-	UserId      string `json:"userId" validate:"required"`
 	DisplayName string `json:"displayName" validate:"required"`
 	Text        string `json:"text,omitempty"`
 	MediaUrl    string `json:"mediaUrl" validate:"required"`

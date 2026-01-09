@@ -10,11 +10,11 @@ import (
 )
 
 type Service interface {
-	Create(ctx context.Context, request CreateContentRequest) api.AppResponse
-	Update(ctx context.Context, request UpdateContentRequest) api.AppResponse
+	Create(ctx context.Context, request CreateContentRequest, userId string) api.AppResponse
+	Update(ctx context.Context, request UpdateContentRequest, userId string) api.AppResponse
 	GetById(ctx context.Context, id string) api.AppResponse
 	GetByFilter(ctx context.Context, filter Filter) api.AppResponse
-	SafeDelete(ctx context.Context, id string) api.AppResponse
+	SafeDelete(ctx context.Context, id string, userId string) api.AppResponse
 }
 
 type service struct {
@@ -23,10 +23,11 @@ type service struct {
 }
 
 const (
-	ErrFailedSave  = "Не удалось сохранить данные"
-	ErrFailedQuery = "Не удалось выполнить запрос"
-	ErrValidation  = "Ошибка проверки данных"
-	Success        = "Успешно"
+	ErrFailedSave         = "Не удалось сохранить данные"
+	ErrFailedQuery        = "Не удалось выполнить запрос"
+	ErrValidation         = "Ошибка проверки данных"
+	ErrInvalidCredentials = "Запись вам не пренадлежит"
+	Success               = "Успешно"
 )
 
 func NewService(repository Repository, logger *slog.Logger) Service {
@@ -40,7 +41,7 @@ func NewService(repository Repository, logger *slog.Logger) Service {
 	return srv
 }
 
-func (s *service) Create(ctx context.Context, request CreateContentRequest) api.AppResponse {
+func (s *service) Create(ctx context.Context, request CreateContentRequest, userId string) api.AppResponse {
 	if err := validateCreate(request); err != nil {
 		return api.NewError(ErrValidation, err)
 	}
@@ -50,7 +51,7 @@ func (s *service) Create(ctx context.Context, request CreateContentRequest) api.
 
 	model := Content{
 		Id:          id,
-		UserId:      request.UserId,
+		UserId:      userId,
 		DisplayName: request.DisplayName,
 		Text:        request.Text,
 		MediaUrl:    request.MediaUrl,
@@ -96,9 +97,18 @@ func (s *service) GetByFilter(ctx context.Context, filter Filter) api.AppRespons
 	return api.NewOk(Success, MapContentSliceToDto(list))
 }
 
-func (s *service) Update(ctx context.Context, request UpdateContentRequest) api.AppResponse {
+func (s *service) Update(ctx context.Context, request UpdateContentRequest, userId string) api.AppResponse {
 	if err := validateUpdate(request); err != nil {
 		return api.NewError(ErrValidation, err)
+	}
+
+	content, err := s.repository.GetById(ctx, request.Id)
+	if err != nil {
+		s.logger.Error("could not get content, error = ", err, "id = ", request.Id)
+		return api.NewError(ErrFailedQuery, nil)
+	}
+	if content.UserId != userId {
+		return api.NewError(ErrInvalidCredentials, nil)
 	}
 
 	model := UpdateContent{
@@ -113,20 +123,20 @@ func (s *service) Update(ctx context.Context, request UpdateContentRequest) api.
 		return api.NewError(ErrFailedSave, nil)
 	}
 
-	response := api.NewOk(Success, nil)
-
-	content, err := s.repository.GetById(ctx, request.Id)
-	if err != nil {
-		s.logger.Error("could not get content, error = ", err, "id = ", request.Id)
-	} else {
-		response.Data = MapContentToDto(content)
-	}
-
-	return response
+	return api.NewOk(Success, MapContentToDto(content))
 }
 
-func (s *service) SafeDelete(ctx context.Context, id string) api.AppResponse {
-	err := s.repository.SafeDelete(ctx, id)
+func (s *service) SafeDelete(ctx context.Context, id string, userId string) api.AppResponse {
+	content, err := s.repository.GetById(ctx, id)
+	if err != nil {
+		s.logger.Error("could not get content, error = ", err, "id = ", id)
+		return api.NewError(ErrFailedQuery, nil)
+	}
+	if content.UserId != userId {
+		return api.NewError(ErrInvalidCredentials, nil)
+	}
+
+	err = s.repository.SafeDelete(ctx, id)
 	if err != nil {
 		s.logger.Error("could not safe delete content, error = ", err, "id = ", id)
 		return api.NewError(ErrFailedSave, nil)

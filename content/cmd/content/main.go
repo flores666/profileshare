@@ -9,6 +9,7 @@ import (
 	"os"
 
 	"github.com/flores666/profileshare-lib/config"
+	libmiddleware "github.com/flores666/profileshare-lib/middleware"
 
 	plog "github.com/flores666/profileshare-lib/logger"
 
@@ -86,6 +87,7 @@ func buildHandler(logger *slog.Logger, storage *sqlx.DB) http.Handler {
 	router.Use(plog.NewRequestLogMiddleware(logger))
 	router.Use(middleware.Recoverer)
 	router.Use(middleware.URLFormat)
+	libmiddleware.AuthMiddleware([]byte(os.Getenv("SECURITY__ACCESS_SECRET")))
 
 	content.NewContentHandler(content.NewService(content.NewRepository(storage), logger)).RegisterRoutes(router)
 

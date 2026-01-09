@@ -82,8 +82,7 @@ func (h *Handler) create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// todo: авторизация и подстановка userId текущего авторизованного пользователя
-	response := h.service.Create(r.Context(), request)
+	response := h.service.Create(r.Context(), request, getUserId(r))
 	if !response.Ok() {
 		respond(w, r, http.StatusInternalServerError, response)
 		return
@@ -99,8 +98,7 @@ func (h *Handler) update(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// todo: авторизация и проверка на владение сущностью
-	response := h.service.Update(r.Context(), request)
+	response := h.service.Update(r.Context(), request, getUserId(r))
 	if !response.Ok() {
 		respond(w, r, http.StatusInternalServerError, response)
 		return
@@ -116,8 +114,7 @@ func (h *Handler) delete(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// todo: авторизация и проверка на владение сущностью
-	response := h.service.SafeDelete(r.Context(), id)
+	response := h.service.SafeDelete(r.Context(), id, getUserId(r))
 	if !response.Ok() {
 		respond(w, r, http.StatusInternalServerError, response)
 		return
@@ -137,4 +134,8 @@ func getFilter(r *http.Request) Filter {
 func respond(w http.ResponseWriter, r *http.Request, status int, response api.AppResponse) {
 	render.Status(r, status)
 	render.JSON(w, r, response)
+}
+
+func getUserId(r *http.Request) string {
+	return r.Context().Value("user_id").(string)
 }

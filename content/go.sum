@@ -10,6 +10,8 @@ github.com/davecgh/go-spew v1.1.1 h1:vj9j/u1bqnvCEfJOwUhtlOARqs3+rkHYY13jYWTU97c
 github.com/davecgh/go-spew v1.1.1/go.mod h1:J7Y8YcW2NihsgmVo/mv3lAwl/skON4iLHjSsI+c5H38=
 github.com/flores666/profileshare-lib v0.0.0-20260107232438-b42a10b34b87 h1:AhfjQeJ3dhXSf1k8d4aE6ltZHsRLPyV2bN3uKXHoRH4=
 github.com/flores666/profileshare-lib v0.0.0-20260107232438-b42a10b34b87/go.mod h1:vG7918xzY7W3yXaE1yB4hMCr6KILgqlcaGn25rGrbVA=
+github.com/flores666/profileshare-lib v0.0.0-20260109132928-0061d9e103e2 h1:/6GYGD9+pZ81rh3wT/7oH93s38a6AG9Yq6B/uXoCZ04=
+github.com/flores666/profileshare-lib v0.0.0-20260109132928-0061d9e103e2/go.mod h1:vgHijEZSE8Gk7HgEzIv3xeTvmTpz2+sIzXqxe3AI/T8=
 github.com/gabriel-vasile/mimetype v1.4.12 h1:e9hWvmLYvtp846tLHam2o++qitpguFiYCKbn0w9jyqw=
 github.com/gabriel-vasile/mimetype v1.4.12/go.mod h1:d+9Oxyo1wTzWdyVUPMmXFvp4F9tea18J8ufA774AB3s=
 github.com/go-chi/chi/v5 v5.2.3 h1:WQIt9uxdsAbgIYgid+BpYc+liqQZGMHRaUwp0JUcvdE=

@@ -16,18 +16,16 @@ type TokenPair struct {
 }
 
 type JWTService struct {
-	accessSecret  []byte
-	refreshSecret []byte
-	AccessTTL     time.Duration
-	RefreshTTL    time.Duration
+	accessSecret []byte
+	AccessTTL    time.Duration
+	RefreshTTL   time.Duration
 }
 
 func NewJWTService(settings Settings) *JWTService {
 	return &JWTService{
-		accessSecret:  []byte(settings.AccessSecret),
-		refreshSecret: []byte(settings.RefreshSecret),
-		AccessTTL:     time.Duration(settings.AccessTTL) * time.Minute,
-		RefreshTTL:    time.Duration(settings.RefreshTTL) * 24 * time.Hour,
+		accessSecret: []byte(settings.AccessSecret),
+		AccessTTL:    time.Duration(settings.AccessTTL) * time.Minute,
+		RefreshTTL:   time.Duration(settings.RefreshTTL) * 24 * time.Hour,
 	}
 }
 

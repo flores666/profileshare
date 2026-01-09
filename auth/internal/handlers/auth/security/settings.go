@@ -6,10 +6,9 @@ import (
 )
 
 type Settings struct {
-	AccessSecret  string
-	RefreshSecret string
-	AccessTTL     int
-	RefreshTTL    int
+	AccessSecret string
+	AccessTTL    int
+	RefreshTTL   int
 }
 
 func MustLoadSettings() Settings {
@@ -24,9 +23,8 @@ func MustLoadSettings() Settings {
 	}
 
 	return Settings{
-		AccessSecret:  os.Getenv("ACCESS_SECRET"),
-		RefreshSecret: os.Getenv("REFRESH_SECRET"),
-		AccessTTL:     attl,
-		RefreshTTL:    rttl,
+		AccessSecret: os.Getenv("SECURITY__ACCESS_SECRET"),
+		AccessTTL:    attl,
+		RefreshTTL:   rttl,
 	}
 }
