@@ -16,7 +16,7 @@ type TokensRepository interface {
 	SaveToken(ctx context.Context, token *storage.Token) error
 	GetByToken(ctx context.Context, token string) (*storage.Token, error)
 	Revoke(ctx context.Context, token string) error
-	RevokeAndReplace(ctx context.Context, oldToken string, newToken string) error
+	RevokeAndReplace(ctx context.Context, oldToken string, newTokenId string) error
 }
 
 type tokensRepository struct {
@@ -73,7 +73,16 @@ func (t *tokensRepository) SaveToken(ctx context.Context, token *storage.Token) 
 }
 
 func (t *tokensRepository) GetByToken(ctx context.Context, token string) (*storage.Token, error) {
-	query := `SELECT * FROM authorization_service.tokens WHERE token = $1`
+	query := `SELECT 
+    	t.id,
+		t.user_id,
+		t.provider_name,
+		t.token,
+		t.expires_at,
+		t.created_at,
+		COALESCE(t.replaced_by_token, '00000000-0000-0000-0000-000000000000') as replaced_by_token,
+		COALESCE(t.revoked_by_ip, '') as revoked_by_ip
+FROM authorization_service.tokens t WHERE t.token = $1`
 
 	var item storage.Token
 	err := t.db.GetContext(ctx, &item, query, token)
@@ -82,6 +91,8 @@ func (t *tokensRepository) GetByToken(ctx context.Context, token string) (*stora
 		if errors.Is(err, sql.ErrNoRows) {
 			return nil, nil
 		}
+
+		return nil, err
 	}
 
 	return &item, err
@@ -90,11 +101,11 @@ func (t *tokensRepository) GetByToken(ctx context.Context, token string) (*stora
 func (t *tokensRepository) Revoke(ctx context.Context, token string) error {
 	executor := getExecutor(ctx, t.db)
 	query := `
-		UPDATE authorization_service.tokens
+		UPDATE authorization_service.tokens t
 		SET
-			revoked_at = $1,
-			expires_at = $2,
-		WHERE token = $3 AND revoked_at IS NULL
+			t.revoked_at = $1,
+			t.expires_at = $2
+		WHERE t.token = $3 AND t.revoked_at IS NULL
 	`
 
 	now := time.Now().UTC()
@@ -103,7 +114,7 @@ func (t *tokensRepository) Revoke(ctx context.Context, token string) error {
 	return err
 }
 
-func (t *tokensRepository) RevokeAndReplace(ctx context.Context, oldToken string, newToken string) error {
+func (t *tokensRepository) RevokeAndReplace(ctx context.Context, oldToken string, newTokenId string) error {
 	executor := getExecutor(ctx, t.db)
 
 	query := `
@@ -118,7 +129,7 @@ func (t *tokensRepository) RevokeAndReplace(ctx context.Context, oldToken string
 
 	params := map[string]any{
 		"token":             oldToken,
-		"replaced_by_token": newToken,
+		"replaced_by_token": newTokenId,
 		"revoked_at":        time.Now().UTC(),
 	}
 

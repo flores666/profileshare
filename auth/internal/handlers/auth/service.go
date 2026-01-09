@@ -99,7 +99,7 @@ func (s *service) Login(ctx context.Context, request LoginUserRequest) api.AppRe
 		return api.NewError(ErrInvalidCredentials, nil)
 	}
 
-	tokens, err := s.issueTokens(ctx, user.Id)
+	tokens, err := s.issueTokens(ctx, user.Id, nil)
 	if err != nil {
 		s.logger.Error("failed to issue tokens", slog.String("error", err.Error()))
 		return api.NewError(ErrInternal, nil)
@@ -170,23 +170,13 @@ func (s *service) RefreshTokens(ctx context.Context, request RefreshTokenRequest
 			return errors.New("refresh token expired")
 		}
 
-		newTokens, err := s.issueTokens(ctx, rt.UserId)
+		replacedBy := ""
+		newTokens, err := s.issueTokens(ctx, rt.UserId, &replacedBy)
 		if err != nil {
 			return err
 		}
 
-		err = s.unitOfWork.Tokens().RevokeAndReplace(ctx, rt.Token, newTokens.RefreshToken)
-		if err != nil {
-			return err
-		}
-
-		err = s.unitOfWork.Tokens().SaveToken(ctx, &storage.Token{
-			Id:        uuid.NewString(),
-			UserId:    rt.UserId,
-			Token:     newTokens.RefreshToken,
-			ExpiresAt: time.Now().UTC().Add(s.jwtService.RefreshTTL),
-			CreatedAt: time.Now().UTC(),
-		})
+		err = s.unitOfWork.Tokens().RevokeAndReplace(ctx, rt.Token, replacedBy)
 		if err != nil {
 			return err
 		}
@@ -233,7 +223,7 @@ func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.A
 			return uowError
 		}
 
-		tokens, uowError := s.issueTokens(ctx, user.Id)
+		tokens, uowError := s.issueTokens(ctx, user.Id, nil)
 		if uowError != nil {
 			s.logger.Error("failed to issue tokens after confirmation", slog.String("error", uowError.Error()))
 			return uowError
@@ -252,14 +242,16 @@ func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.A
 	return response
 }
 
-func (s *service) issueTokens(ctx context.Context, userId string) (*security.TokenPair, error) {
+func (s *service) issueTokens(ctx context.Context, userId string, newTokenId *string) (*security.TokenPair, error) {
 	tokens, err := s.jwtService.GenerateTokens(userId)
 	if err != nil {
 		return nil, err
 	}
 
+	id := uuid.NewString()
+
 	err = s.unitOfWork.Tokens().SaveToken(ctx, &storage.Token{
-		Id:           utils.NewGuid(),
+		Id:           id,
 		UserId:       userId,
 		ProviderName: security.ProviderLumo,
 		Token:        tokens.RefreshToken,
@@ -270,6 +262,8 @@ func (s *service) issueTokens(ctx context.Context, userId string) (*security.Tok
 	if err != nil {
 		return nil, err
 	}
+
+	*newTokenId = id
 
 	return tokens, nil
 }
