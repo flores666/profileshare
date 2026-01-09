@@ -33,6 +33,7 @@ const (
 	ErrCodeRequestTimeout = "Повторите попытку через 5 минут"
 	ErrInternal           = "Внутрення ошибка"
 	ErrInvalidCredentials = "Неверные логин или пароль"
+	CodeSent              = "Сообщение с новым кодом подтверждения отправлено на вашу почту"
 	CodeRequestTimeout    = time.Minute * 2
 	AccConfirmTimeout     = time.Minute * 10
 	Success               = "Успешно"
@@ -292,7 +293,7 @@ func (s *service) handleExistingUser(ctx context.Context, user *storage.User, re
 
 	go s.publishUser(user, redirectUrl)
 
-	return api.NewOk("Сообщение с новым кодом подтверждения отправлено на вашу почту", mapper.MapUserToDto(user))
+	return api.NewOk(CodeSent, mapper.MapUserToDto(user))
 }
 
 func (s *service) createUser(ctx context.Context, request RegisterUserRequest) api.AppResponse {
@@ -316,7 +317,7 @@ func (s *service) createUser(ctx context.Context, request RegisterUserRequest) a
 
 	go s.publishUser(model, request.ReturnUrl)
 
-	return api.NewOk(Success, mapper.MapUserToDto(model))
+	return api.NewOk(CodeSent, mapper.MapUserToDto(model))
 }
 
 func (s *service) publishUser(user *storage.User, redirectUrl string) {
