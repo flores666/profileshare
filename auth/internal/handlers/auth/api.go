@@ -1,8 +1,10 @@
 package auth
 
 import (
+	"auth/internal/handlers/auth/security"
 	"auth/internal/lib/handlers"
 	"net/http"
+	"strings"
 
 	"github.com/flores666/profileshare-lib/api"
 
@@ -24,6 +26,7 @@ func NewAuthHandler(service Service) *Handler {
 func (h *Handler) RegisterRoutes(r chi.Router) {
 	r.Post(BaseRoutePath+"/register", h.register)
 	r.Post(BaseRoutePath+"/login", h.login)
+	r.Post(BaseRoutePath+"/logout", h.logout)
 	r.Post(BaseRoutePath+"/confirm", h.confirm)
 }
 
@@ -56,6 +59,17 @@ func (h *Handler) login(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	if tokens, ok := result.Data.(*security.TokenPair); ok {
+		http.SetCookie(w, &http.Cookie{
+			Name:     "rt",
+			Value:    tokens.RefreshToken,
+			HttpOnly: true,
+			Secure:   true,
+			SameSite: http.SameSiteStrictMode,
+			MaxAge:   60 * 60 * 24 * 7, // 7 days
+		})
+	}
+
 	handlers.Respond(w, r, http.StatusOK, result)
 }
 
@@ -67,6 +81,30 @@ func (h *Handler) confirm(w http.ResponseWriter, r *http.Request) {
 	}
 
 	result := h.service.Confirm(r.Context(), request)
+	if !result.Ok() {
+		handlers.Respond(w, r, http.StatusInternalServerError, result)
+		return
+	}
+
+	handlers.Respond(w, r, http.StatusOK, result)
+}
+
+func (h *Handler) logout(w http.ResponseWriter, r *http.Request) {
+	var request LogoutRequest
+	if err := api.GetBodyWithValidation(r, &request); err != nil {
+		cookie, cerr := r.Cookie("rt")
+
+		if cerr != nil {
+			handlers.Respond(w, r, http.StatusBadRequest, api.NewError(err.Error(), nil))
+			return
+		}
+
+		request.RefreshToken = cookie.Value
+	}
+
+	request.AccessToken = strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+
+	result := h.service.Logout(r.Context(), request)
 	if !result.Ok() {
 		handlers.Respond(w, r, http.StatusInternalServerError, result)
 		return

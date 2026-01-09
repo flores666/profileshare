@@ -21,6 +21,7 @@ type Service interface {
 	Register(ctx context.Context, request RegisterUserRequest) api.AppResponse
 	Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse
 	Login(ctx context.Context, request LoginUserRequest) api.AppResponse
+	Logout(ctx context.Context, request LogoutRequest) api.AppResponse
 }
 
 const (
@@ -101,6 +102,44 @@ func (s *service) Login(ctx context.Context, request LoginUserRequest) api.AppRe
 	}
 
 	return api.NewOk(Success, tokens)
+}
+
+func (s *service) Logout(ctx context.Context, request LogoutRequest) api.AppResponse {
+	if request.RefreshToken == "" {
+		return api.NewError("refresh token обязателен", nil)
+	}
+
+	if request.AccessToken != "" {
+		userId, err := s.jwtService.GetValue(request.AccessToken, "user_id")
+		if err != nil {
+			s.logger.Warn("invalid access token on logout", slog.String("error", err.Error()))
+		} else {
+			ctx = context.WithValue(ctx, "user_id", userId)
+		}
+	}
+
+	rt, err := s.unitOfWork.Tokens().GetByRefresh(ctx, request.RefreshToken)
+	if err != nil {
+		return api.NewError(ErrInternal, nil)
+	}
+
+	if rt == nil || !rt.RevokedAt.IsZero() || !rt.ExpiresAt.IsZero() {
+		return api.NewOk(Success, nil)
+	}
+
+	if userID, ok := ctx.Value("user_id").(string); ok {
+		if rt.UserId != userID {
+			return api.NewError("refresh token не принадлежит пользователю", nil)
+		}
+	}
+
+	err = s.unitOfWork.Tokens().Revoke(ctx, rt.Id)
+	if err != nil {
+		s.logger.Error("failed to logout", slog.String("error", err.Error()))
+		return api.NewError(ErrInternal, nil)
+	}
+
+	return api.NewOk(Success, nil)
 }
 
 func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse {
