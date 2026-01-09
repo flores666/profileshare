@@ -20,7 +20,7 @@
 
 Чтобы зарегистрироваться без сервиса для отправки почты:
 1. /auth/register
-2. в бд находим код и отправляем запрос на /auth/confirm
+2. в бд authorization_service.users находим код и отправляем запрос на /auth/confirm
 
 и эндпоинты /users/ для получения информации о пользователях
 
@@ -56,7 +56,7 @@
 
 ```env
 CONFIG_PATH=config/local.yaml
-DB__CONNECTION_STRING="postgres://postgres:postgres@localhost:5432/mydb?sslmode=disable"
+DB__CONNECTION_STRING="postgres://postgres:postgres@db:5432/mydb?sslmode=disable"
 SECURITY__ACCESS_SECRET="BkHMGL5ZiN4kotSDzjG8J14adEkAbwiaOB31QzXB21"
 SECURITY__ACCESS_LIFETIME_MINUTES=10
 SECURITY__REFRESH_LIFETIME_DAYS=7
@@ -66,14 +66,14 @@ SECURITY__REFRESH_LIFETIME_DAYS=7
 
 ```env
 CONFIG_PATH=config/local.yaml
-DB__CONNECTION_STRING="postgres://postgres:postgres@localhost:5432/mydb?sslmode=disable"
+DB__CONNECTION_STRING="postgres://postgres:postgres@db:5432/mydb?sslmode=disable"
 ```
 
 ### 2.3 Content Service
 
 ```env
 CONFIG_PATH=config/local.yaml
-DB__CONNECTION_STRING="postgres://postgres:postgres@localhost:5432/mydb?sslmode=disable"
+DB__CONNECTION_STRING="postgres://postgres:postgres@db:5432/mydb?sslmode=disable"
 SECURITY__ACCESS_SECRET="BkHMGL5ZiN4kotSDzjG8J14adEkAbwiaOB31QzXB21"
 ```
 
@@ -81,7 +81,7 @@ SECURITY__ACCESS_SECRET="BkHMGL5ZiN4kotSDzjG8J14adEkAbwiaOB31QzXB21"
 
 ```env
 CONFIG_PATH=config/local.yaml
-DB__CONNECTION_STRING="postgres://postgres:postgres@localhost:5432/mydb?sslmode=disable"
+DB__CONNECTION_STRING="postgres://postgres:postgres@db:5432/mydb?sslmode=disable"
 SMTP__USERNAME=""
 SMTP__PASSWORD=""
 SMTP__HOST=""
