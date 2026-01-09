@@ -14,8 +14,9 @@ import (
 
 type TokensRepository interface {
 	SaveToken(ctx context.Context, token *storage.Token) error
-	GetByRefresh(ctx context.Context, token string) (*storage.Token, error)
+	GetByToken(ctx context.Context, token string) (*storage.Token, error)
 	Revoke(ctx context.Context, token string) error
+	RevokeAndReplace(ctx context.Context, oldToken string, newToken string) error
 }
 
 type tokensRepository struct {
@@ -71,7 +72,7 @@ func (t *tokensRepository) SaveToken(ctx context.Context, token *storage.Token) 
 	return err
 }
 
-func (t *tokensRepository) GetByRefresh(ctx context.Context, token string) (*storage.Token, error) {
+func (t *tokensRepository) GetByToken(ctx context.Context, token string) (*storage.Token, error) {
 	query := `SELECT * FROM authorization_service.tokens WHERE token = $1`
 
 	var item storage.Token
@@ -87,6 +88,7 @@ func (t *tokensRepository) GetByRefresh(ctx context.Context, token string) (*sto
 }
 
 func (t *tokensRepository) Revoke(ctx context.Context, token string) error {
+	executor := getExecutor(ctx, t.db)
 	query := `
 		UPDATE authorization_service.tokens
 		SET
@@ -97,6 +99,29 @@ func (t *tokensRepository) Revoke(ctx context.Context, token string) error {
 
 	now := time.Now().UTC()
 
-	_, err := t.db.ExecContext(ctx, query, token, now, now)
+	_, err := executor.ExecContext(ctx, query, token, now, now)
+	return err
+}
+
+func (t *tokensRepository) RevokeAndReplace(ctx context.Context, oldToken string, newToken string) error {
+	executor := getExecutor(ctx, t.db)
+
+	query := `
+		UPDATE authorization_service.tokens
+		SET
+			revoked_at = :revoked_at,
+			replaced_by_token = :replaced_by_token
+		WHERE
+			token = :token
+			AND revoked_at IS NULL
+	`
+
+	params := map[string]any{
+		"token":             oldToken,
+		"replaced_by_token": newToken,
+		"revoked_at":        time.Now().UTC(),
+	}
+
+	_, err := executor.NamedExecContext(ctx, query, params)
 	return err
 }

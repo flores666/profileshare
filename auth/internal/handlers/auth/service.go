@@ -8,6 +8,7 @@ import (
 	"auth/internal/lib/password"
 	"auth/internal/storage"
 	"context"
+	"errors"
 	"log/slog"
 	"net/url"
 	"time"
@@ -15,6 +16,7 @@ import (
 	"github.com/flores666/profileshare-lib/api"
 	"github.com/flores666/profileshare-lib/eventBus"
 	"github.com/flores666/profileshare-lib/utils"
+	"github.com/google/uuid"
 )
 
 type Service interface {
@@ -22,6 +24,7 @@ type Service interface {
 	Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse
 	Login(ctx context.Context, request LoginUserRequest) api.AppResponse
 	Logout(ctx context.Context, request LogoutRequest) api.AppResponse
+	RefreshTokens(ctx context.Context, request RefreshTokenRequest) api.AppResponse
 }
 
 const (
@@ -118,7 +121,7 @@ func (s *service) Logout(ctx context.Context, request LogoutRequest) api.AppResp
 		}
 	}
 
-	rt, err := s.unitOfWork.Tokens().GetByRefresh(ctx, request.RefreshToken)
+	rt, err := s.unitOfWork.Tokens().GetByToken(ctx, request.RefreshToken)
 	if err != nil {
 		return api.NewError(ErrInternal, nil)
 	}
@@ -140,6 +143,63 @@ func (s *service) Logout(ctx context.Context, request LogoutRequest) api.AppResp
 	}
 
 	return api.NewOk(Success, nil)
+}
+
+func (s *service) RefreshTokens(ctx context.Context, request RefreshTokenRequest) api.AppResponse {
+	if request.RefreshToken == "" {
+		return api.NewError("refresh token обязателен", nil)
+	}
+
+	var response api.AppResponse
+	err := s.unitOfWork.Do(ctx, func(ctx context.Context) error {
+		rt, err := s.unitOfWork.Tokens().GetByToken(ctx, request.RefreshToken)
+		if err != nil {
+			return err
+		}
+
+		if rt == nil {
+			return errors.New("refresh token not found")
+		}
+
+		if !rt.RevokedAt.IsZero() {
+			return errors.New("refresh token revoked")
+		}
+
+		if rt.ExpiresAt.Before(time.Now().UTC()) {
+			return errors.New("refresh token expired")
+		}
+
+		newTokens, err := s.issueTokens(ctx, rt.UserId)
+		if err != nil {
+			return err
+		}
+
+		err = s.unitOfWork.Tokens().RevokeAndReplace(ctx, rt.Token, newTokens.RefreshToken)
+		if err != nil {
+			return err
+		}
+
+		err = s.unitOfWork.Tokens().SaveToken(ctx, &storage.Token{
+			Id:        uuid.NewString(),
+			UserId:    rt.UserId,
+			Token:     newTokens.RefreshToken,
+			ExpiresAt: time.Now().UTC().Add(s.jwtService.RefreshTTL),
+			CreatedAt: time.Now().UTC(),
+		})
+		if err != nil {
+			return err
+		}
+
+		response = api.NewOk(Success, newTokens)
+		return nil
+	})
+
+	if err != nil {
+		s.logger.Warn("refresh token failed", slog.String("error", err.Error()))
+		return api.NewError("Не удалось обновить сессию", nil)
+	}
+
+	return response
 }
 
 func (s *service) Confirm(ctx context.Context, request ConfirmUserRequest) api.AppResponse {
